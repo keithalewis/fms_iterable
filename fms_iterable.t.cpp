@@ -12,7 +12,7 @@ inline int pointer_test()
 	static_assert(!ptr<int>());
 	{
 		int i[] = { 1, 2, 3 };
-		auto p = ptr(i, 3);
+		auto p = take(ptr(i), 3);
 		auto p2{ p };
 		assert(p == p2);
 		p = p2;
@@ -47,6 +47,12 @@ inline int pointer_test()
 		assert(*p == 3);
 		++p;
 		assert(!p);
+
+		auto q = array(a);
+		int k = 1;
+		for (auto i : q) {
+			assert(i == k++);
+		}
 	}
 	{ // compare
 		int i[] = { 1, 2, 3 };
@@ -83,6 +89,17 @@ inline int pointer_test()
 		assert(a[-1] == 1);
 		assert(*(a - 1) == 1);
 		assert(*(-1 + a) == 1);
+	}
+	{
+		int i[] = { 1, 2, 3 };
+		auto p = array(i);
+		auto q = take(ptr(i), 2);
+		assert(p != q);
+		assert(p > q);
+		assert(p >= q);
+		assert(!(p < q));
+		assert(!(p <= q));
+
 	}
 
 	return 0;
