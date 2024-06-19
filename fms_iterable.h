@@ -52,11 +52,6 @@ namespace fms::iterable {
 
 		return !!i <=> !!j;
 	}
-	template<input_iterable I, input_iterable J>
-	constexpr auto operator<=>(I i, J j)
-	{
-		return compare(i, j);
-	}
 
 
 	// Possibly unsafe pointer iterable with std::span/view semantics.
@@ -81,18 +76,13 @@ namespace fms::iterable {
 		constexpr ptr& operator=(ptr&&) = default;
 		constexpr ~ptr() = default;
 
-		//constexpr auto operator<=>(const ptr& _p) const
-		//{
-		//	return compare(*this, _p);
-		//}
-		constexpr bool operator==(const ptr& _p) const
+		constexpr auto operator<=>(const ptr& _p) const
 		{
-			return compare(*this, _p) == 0;
+			const auto cmp = p <=> _p.p;
+
+			return cmp == 0 ? n <=> _p.n : cmp;
 		}
-		constexpr bool operator<(const ptr& _p) const
-		{
-			return compare(*this, _p) < 0;
-		}
+		constexpr bool operator==(const ptr&) const = default;
 
 		constexpr ptr begin() const
 		{
@@ -209,5 +199,111 @@ namespace fms::iterable {
 		return ptr(a, N);
 	}
 
+	template<std::input_or_output_iterator I>
+	class interval {
+		I b, e;
+	public:
+		using iterator_category = typename I::iterator_category;
+		using value_type = typename I::value_type;
+		using reference = typename I::reference;
+		using pointer = typename I::pointer;
+		using difference_type = typename I::difference_type;
+
+		constexpr interval(I b, I e)
+			: b(b), e(e)
+		{ }
+		constexpr interval(const interval&) = default;
+		constexpr interval& operator=(const interval&) = default;
+		constexpr interval(interval&&) = default;
+		constexpr interval& operator=(interval&&) = default;
+		constexpr ~interval() = default;
+
+		constexpr auto operator<=>(const interval& i) const = default;
+
+		constexpr interval begin() const
+		{
+			return *this;
+		}
+		constexpr interval end() const
+		{
+			return interval(e, e);
+		}
+
+		constexpr explicit operator bool() const noexcept
+		{
+			return b != e;
+		}
+		// indirectly readable
+		constexpr reference operator*() const noexcept
+		{
+			return *b;
+		}
+		// indirectly writable
+		constexpr reference operator*() noexcept
+			requires std::indirectly_writable<I,value_type>
+		{
+			return *b;
+		}
+		// weakly incrementable
+		constexpr interval& operator++() noexcept
+		{
+			if (b != e) {
+				++b;
+			}
+
+			return *this;
+		}
+		constexpr interval operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+		// bidirectional
+		constexpr interval& operator--() noexcept
+			requires std::bidirectional_iterator<I>
+		{
+			--b;
+
+			return *this;
+		}
+		constexpr interval operator--(int) noexcept
+			requires std::bidirectional_iterator<I>
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
+		// random access
+		constexpr interval& operator+=(difference_type d) noexcept
+			requires std::random_access_iterator<I>
+		{
+			b += d;
+
+			return *this;
+		}
+		constexpr interval operator+(difference_type d) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return interval(b + d, e);
+		}
+		constexpr interval& operator-=(difference_type d) noexcept
+			requires std::random_access_iterator<I>
+		{
+			b -= d;
+
+			return *this;
+		}
+	};
+	// Assumes lifetime of container.
+	template<class C>
+	constexpr auto make_interval(C& c)
+	{
+		return interval(std::begin(c), std::end(c));
+	}
 
 } // namespace fms
