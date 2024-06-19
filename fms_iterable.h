@@ -55,7 +55,7 @@ namespace fms::iterable {
 	template<input_iterable I, input_iterable J>
 	constexpr auto operator<=>(I i, J j)
 	{
-		return !!i <=> !!j;
+		return compare(i, j);
 	}
 
 
