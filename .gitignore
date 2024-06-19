@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/build/CMakeFiles/fms_iterable.t.dir/compiler_depend.internal
+/build/CMakeFiles/fms_iterable.t.dir/compiler_depend.make
+/build/CMakeFiles/fms_iterable.t.dir/fms_iterable.t.cpp.o.d
+/build/fms_iterable.t
+/build/Testing/Temporary/CTestCostData.txt
