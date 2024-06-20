@@ -113,6 +113,7 @@ int interval_test()
 		auto i = interval(v.begin(), v.end());
 		auto j = make_interval(l);
 		assert(compare(i, j) == 0);
+		assert(compare(take(i,2), take(j,2)) == 0);
 
 		i += 2;
 		// j += 2; // list not random access
@@ -128,11 +129,23 @@ int interval_test()
 	return 0;
 }
 
+int repeat_test()
+{
+	{
+		auto i = repeat(once(1));
+	}
+	{
+		assert(compare(take(constant(1), 3), take(repeat(once(1)), 3)) == 0);	
+	}
+
+	return 0;
+}
 
 int main()
 {
 	pointer_test();
 	interval_test();
+	repeat_test();
 
 	return 0;
 }

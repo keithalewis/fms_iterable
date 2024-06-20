@@ -40,7 +40,7 @@ namespace fms::iterable {
 	};
 
 	// Compare elements of two iterables
-	template<input_iterable I, input_iterable J>
+	template<class I, class J>
 	constexpr auto compare(I i, J j)
 	{
 		while (i && j) {
@@ -54,13 +54,13 @@ namespace fms::iterable {
 	}
 
 
-	// Possibly unsafe pointer iterable with std::span/view semantics.
+	// Unsafe pointer iterable with std::span/view semantics.
 	template<class T>
 	class ptr {
 	protected:
 		T* p;
 	public:
-		using iterator_category = std::contiguous_iterator_tag;
+		using iterator_category = std::random_access_iterator_tag;
 		using value_type = T;
 		using reference = T&;
 		using pointer = T*;
@@ -164,11 +164,6 @@ namespace fms::iterable {
 		{
 			return p[i];
 		}
-		// contiguous
-		constexpr auto operator->() const noexcept
-		{
-			return p;
-		}
 	};
 	template<class T>
 	constexpr ptr<T> operator+(std::ptrdiff_t d, ptr<T> p) noexcept
@@ -181,7 +176,15 @@ namespace fms::iterable {
 		return p - d;
 	}
 
-	template<std::input_or_output_iterator I>
+	// Iterable with no elements.
+	template<class T>
+	constexpr auto empty()
+	{
+		return ptr<T>();
+	}
+
+	// Iterable over [begin(), end()).
+	template<class I>
 	class interval {
 		I b, e;
 	public:
@@ -200,7 +203,7 @@ namespace fms::iterable {
 		constexpr interval& operator=(interval&&) = default;
 		constexpr ~interval() = default;
 
-		constexpr auto operator<=>(const interval& i) const = default;
+		/*constexpr*/ auto operator<=>(const interval& i) const = default;
 
 		constexpr interval begin() const
 		{
@@ -216,7 +219,7 @@ namespace fms::iterable {
 			return b != e;
 		}
 		// indirectly readable
-		constexpr reference operator*() const noexcept
+		constexpr value_type operator*() const noexcept
 		{
 			return *b;
 		}
@@ -323,35 +326,35 @@ namespace fms::iterable {
 		return interval(ptr(a), ptr(a + N));
 	}
 
-	template<std::input_or_output_iterator I>
+	template<class I>
 	constexpr auto take(I i, std::size_t n)
 	{
 		return interval(i, std::next(i, n));
 	}
 
 	// i0, ..., in, i0, ...
-	template<std::input_or_output_iterator I>
-	class cyclic {
+	template<class I>
+	class repeat {
 		I i, i0;
 	public:
-		using iterator_category = std::common_type<std::forward_iterator_tag, typename I::iterator_category>;
+		using iterator_category = std::input_iterator_tag;
 		using value_type = typename I::value_type;
 		using reference = typename I::reference;
 		using pointer = typename I::pointer;
 		using difference_type = typename I::difference_type;
 
-		constexpr cyclic(I i)
+		constexpr repeat(I i)
 			: i(i), i0(i)
 		{ }
-		constexpr cyclic(const cyclic&) = default;
-		constexpr cyclic& operator=(const cyclic&) = default;
-		constexpr cyclic(cyclic&&) = default;
-		constexpr cyclic& operator=(cyclic&&) = default;
-		constexpr ~cyclic() = default;
+		constexpr repeat(const repeat&) = default;
+		constexpr repeat& operator=(const repeat&) = default;
+		constexpr repeat(repeat&&) = default;
+		constexpr repeat& operator=(repeat&&) = default;
+		constexpr ~repeat() = default;
 
-		constexpr auto operator<=>(const cyclic& c) const = default;
+		constexpr auto operator<=>(const repeat& c) const = default;
 
-		constexpr cyclic begin() const
+		constexpr repeat begin() const
 		{
 			return *this;
 		}
@@ -359,9 +362,9 @@ namespace fms::iterable {
 
 		constexpr explicit operator bool() const noexcept
 		{
-			return true;
+			return i.operator bool(); // repeat(empty) = empty
 		}
-		constexpr reference operator*() const noexcept
+		constexpr value_type operator*() const noexcept
 		{
 			return *i;
 		}
@@ -370,7 +373,7 @@ namespace fms::iterable {
 		{
 			return *i;
 		}
-		constexpr cyclic& operator++() noexcept
+		constexpr repeat& operator++() noexcept
 		{
 			if (!++i) {
 				i = i0;
@@ -378,7 +381,7 @@ namespace fms::iterable {
 
 			return *this;
 		}
-		constexpr cyclic operator++(int) noexcept
+		constexpr repeat operator++(int) noexcept
 		{
 			auto tmp{ *this };
 
@@ -387,5 +390,52 @@ namespace fms::iterable {
 			return tmp;
 		}
 	};
+
+	template<class T>
+	class constant {
+		T t;
+	public:
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = std::ptrdiff_t;
+
+		constant(T t)
+			: t(t)
+		{ }	
+
+		constexpr auto operator<=>(const constant&) const = default;
+
+		constexpr constant begin() const
+		{
+			return *this;
+		}
+		// no end()
+
+		constexpr operator bool() const
+		{
+			return true;
+		}
+		constexpr value_type operator*() const
+		{
+			return t;
+		}
+		constexpr constant& operator++()
+		{
+			return *this;
+		}
+		constexpr constant operator++(int)
+		{
+			return *this;
+		}
+	};
+
+	template<class T>
+	constexpr auto once(T t)
+	{
+		return take(constant<T>(t), 1);
+	}
+
 
 } // namespace fms

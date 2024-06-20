@@ -1,4 +1,0 @@
-/mnt/c/users/kal/source/repos/keithalewis/fms_iterable2/build/CMakeFiles/fms_iterable.t.dir
-/mnt/c/users/kal/source/repos/keithalewis/fms_iterable2/build/CMakeFiles/test.dir
-/mnt/c/users/kal/source/repos/keithalewis/fms_iterable2/build/CMakeFiles/edit_cache.dir
-/mnt/c/users/kal/source/repos/keithalewis/fms_iterable2/build/CMakeFiles/rebuild_cache.dir
