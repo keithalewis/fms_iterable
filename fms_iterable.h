@@ -198,7 +198,7 @@ namespace fms::iterable {
 		constexpr interval& operator=(interval&&) = default;
 		constexpr ~interval() = default;
 
-		/*constexpr*/ auto operator<=>(const interval& i) const = default;
+		constexpr auto operator<=>(const interval& i) const = default;
 
 		constexpr interval begin() const
 		{
@@ -235,7 +235,7 @@ namespace fms::iterable {
 		return interval(i, std::next(i, n));
 	}
 
-	// i0, ..., in, i0, ...
+	// Cycle over iterator values.
 	template<class I>
 	class repeat {
 		I i, i0;
@@ -262,7 +262,7 @@ namespace fms::iterable {
 		{
 			return *this;
 		}
-		// no end
+		// no end()
 
 		constexpr explicit operator bool() const noexcept
 		{
