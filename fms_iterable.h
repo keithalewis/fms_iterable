@@ -185,17 +185,12 @@ namespace fms::iterable {
 
 	// Iterable over [begin(), end()).
 	template<class I>
-	class interval {
-		I b, e;
+	class interval : public I {
+		I e;
 	public:
-		using iterator_category = typename I::iterator_category;
-		using value_type = typename I::value_type;
-		using reference = typename I::reference;
-		using pointer = typename I::pointer;
-		using difference_type = typename I::difference_type;
-
+		constexpr interval() = default;
 		constexpr interval(I b, I e)
-			: b(b), e(e)
+			: I(b), e(e)
 		{ }
 		constexpr interval(const interval&) = default;
 		constexpr interval& operator=(const interval&) = default;
@@ -216,101 +211,9 @@ namespace fms::iterable {
 
 		constexpr explicit operator bool() const noexcept
 		{
-			return b != e;
-		}
-		// indirectly readable
-		constexpr value_type operator*() const noexcept
-		{
-			return *b;
-		}
-		// indirectly writable
-		constexpr reference operator*() noexcept
-			requires std::indirectly_writable<I,value_type>
-		{
-			return *b;
-		}
-		// weakly incrementable
-		constexpr interval& operator++() noexcept
-		{
-			if (b != e) {
-				++b;
-			}
-
-			return *this;
-		}
-		constexpr interval operator++(int) noexcept
-		{
-			auto tmp{ *this };
-
-			operator++();
-
-			return tmp;
-		}
-		// bidirectional
-		constexpr interval& operator--() noexcept
-			requires std::bidirectional_iterator<I>
-		{
-			--b;
-
-			return *this;
-		}
-		constexpr interval operator--(int) noexcept
-			requires std::bidirectional_iterator<I>
-		{
-			auto tmp{ *this };
-
-			operator--();
-
-			return tmp;
-		}
-		// random access
-		constexpr interval& operator+=(difference_type i) noexcept
-			requires std::random_access_iterator<I>
-		{
-			b += i;
-
-			return *this;
-		}
-		constexpr interval operator+(difference_type i) const noexcept
-			requires std::random_access_iterator<I>
-		{
-			return interval(b + i, e);
-		}
-		constexpr interval& operator-=(difference_type i) noexcept
-			requires std::random_access_iterator<I>
-		{
-			b -= i;
-
-			return *this;
-		}
-		constexpr interval operator-(difference_type i) const noexcept
-			requires std::random_access_iterator<I>
-		{
-			return interval(b - i, e);
-		}
-		reference operator[](difference_type i) const noexcept
-			requires std::random_access_iterator<I>
-		{
-			return b[i];
-		}
-		reference operator[](difference_type i) noexcept
-			requires std::random_access_iterator<I>
-		{
-			return b[i];
+			return *this != e;
 		}
 	};
-	template<class I>
-		requires std::random_access_iterator<I>
-	constexpr interval<I> operator+(std::ptrdiff_t d, interval<I> p) noexcept
-	{
-		return p + d;
-	}
-	template<class I>
-		requires std::random_access_iterator<I>
-	constexpr interval<I> operator-(std::ptrdiff_t d, interval<I> p) noexcept
-	{
-		return p - d;
-	}
 
 	// Assumes lifetime of container.
 	template<class C>
@@ -343,6 +246,7 @@ namespace fms::iterable {
 		using pointer = typename I::pointer;
 		using difference_type = typename I::difference_type;
 
+		constexpr repeat() = default;
 		constexpr repeat(I i)
 			: i(i), i0(i)
 		{ }
@@ -401,7 +305,8 @@ namespace fms::iterable {
 		using pointer = T*;
 		using difference_type = std::ptrdiff_t;
 
-		constant(T t)
+		constexpr constant() = default;	
+		constexpr constant(T t)
 			: t(t)
 		{ }	
 
