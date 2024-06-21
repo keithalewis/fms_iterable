@@ -11,17 +11,18 @@ namespace fms::iterable {
 	concept has_op_bool = requires(I i) {
 		{ i.operator bool() } -> std::same_as<bool>;
 	};
-	template<class I> concept input_iterable 
+
+	template<class I> concept input_iterable
 		= std::input_iterator<I> && has_op_bool<I>;
-	template<class I, class T> concept output_iterable 
-		= std::output_iterator<I, T> && has_op_bool<I>;
-	template<class I> concept forward_iterable 
+	template<class I, class T> concept output_iterable
+		= std::output_iterator<I, T>&& has_op_bool<I>;
+	template<class I> concept forward_iterable
 		= std::forward_iterator<I> && has_op_bool<I>;
-	template<class I> concept bidirectional_iterable 
+	template<class I> concept bidirectional_iterable
 		= std::bidirectional_iterator<I> && has_op_bool<I>;
-	template<class I> concept random_access_iterable 
+	template<class I> concept random_access_iterable
 		= std::random_access_iterator<I> && has_op_bool<I>;
-	template<class I> concept contiguous_iterable 
+	template<class I> concept contiguous_iterable
 		= std::contiguous_iterator<I> && has_op_bool<I>;
 
 	template <class I>
@@ -180,12 +181,49 @@ namespace fms::iterable {
 
 			return tmp;
 		}
+		constexpr iota& operator--() noexcept
+		{
+			--t;
+
+			return *this;
+		}
+		constexpr iota operator--(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
+		constexpr iota& operator+=(difference_type d) noexcept
+		{
+			t += d;
+
+			return *this;
+		}
+		constexpr iota operator+(difference_type d) const noexcept
+		{
+			return iota(t + T(d));
+		}
+		constexpr iota& operator-=(difference_type d) noexcept
+		{
+			t -= T(d);
+
+			return *this;
+		}
+		constexpr iota operator-(difference_type d) const noexcept
+		{
+			return iota(t - d);
+		}
+		constexpr iota operator-(const iota& i) const noexcept
+		{
+			return iota(t - i.t);
+		}
 	};
 	// tn, tn*t, tn*t*t, ...
 	template <class T>
 	class power {
 		T t, tn;
-
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = T;
@@ -702,8 +740,7 @@ namespace fms::iterable {
 	}
 
 	// i0 then i1
-	template <class I0, class I1, 
-		class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
+	template <class I0, class I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
 	class concatenate2 {
 		I0 i0;
 		I1 i1;
@@ -766,8 +803,7 @@ namespace fms::iterable {
 	}
 
 	// Sorted i0 and i1 in order. Equivalent (!< and !>) elements are repeated.
-	template <class I0, class I1, 
-		class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
+	template <class I0, class I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
 	class merge2 {
 		I0 i0;
 		I1 i1;
@@ -880,57 +916,120 @@ namespace fms::iterable {
 	}
 
 	// Apply a function to elements of an iterable.
-	template <class F, class I, class T = typename I::value_type,
-		class U = std::invoke_result_t<F, T>>
-		class apply {
+	template <class F, class I, class T = typename I::value_type, class U = std::invoke_result_t<F, T>>
+	class apply {
 		F f;
 		I i;
-		public:
-			using iterator_category = std::input_iterator_tag;
-			using value_type = U;
-			using reference = U&;
-			using pointer = U*;
-			using difference_type = typename I::difference_type;
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = U;
+		using reference = U&;
+		using pointer = U*;
+		using difference_type = typename I::difference_type;
 
-			constexpr apply() = default;
-			constexpr apply(const F& f, const I& i)
-				: f(f), i(i)
-			{ }
-			constexpr apply(const apply& a) = default;
-			constexpr apply(apply&& a) = default;
-			constexpr apply& operator=(const apply& a) = default;
-			constexpr apply& operator=(apply&& a) = default;
-			constexpr ~apply() = default;
+		constexpr apply() = default;
+		constexpr apply(F f, const I& i)
+			: f(f), i(i)
+		{ }
+		constexpr apply(const apply& a) = default;
+		constexpr apply(apply&& a) = default;
+		constexpr apply& operator=(const apply& a) = default;
+		constexpr apply& operator=(apply&& a) = default;
+		constexpr ~apply() = default;
 
-			constexpr bool operator==(const apply& a) const
-			{
-				return i == a.i;
-			}
+		constexpr bool operator==(const apply& a) const
+		{
+			return i == a.i; // F is part of type
+		}
 
-			constexpr explicit operator bool() const
-			{
-				return i.operator bool();
-			}
-			constexpr value_type operator*() const
-			{
-				return f(*i);
-			}
-			constexpr apply& operator++() noexcept
-			{
-				++i;
+		constexpr explicit operator bool() const
+		{
+			return i.operator bool();
+		}
+		constexpr value_type operator*() const
+		{
+			return f(*i);
+		}
+		constexpr apply& operator++() noexcept
+		{
+			++i;
 
-				return *this;
-			}
-			constexpr apply operator++(int) noexcept
-			{
-				auto tmp{ *this };
+			return *this;
+		}
+		constexpr apply operator++(int) noexcept
+		{
+			auto tmp{ *this };
 
-				operator++();
+			operator++();
 
-				return tmp;
-			}
+			return tmp;
+		}
 	};
 
+	// Elements satisfying predicate.
+	template <class P, class I, class T = typename I::value_type>
+	class filter {
+		P p;
+		I i;
+
+		constexpr void next()
+		{
+			while (i && !p(*i)) {
+				++i;
+			}
+		}
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = typename I::difference_type;
+
+		constexpr filter() = default;
+		constexpr filter(P p, const I& i)
+			: p(p), i(i)
+		{
+			next();
+		}
+		constexpr filter(const filter& a)
+			: p(a.p), i(a.i)
+		{
+			next();
+		}
+		constexpr filter(filter&& a) = default;
+		constexpr filter& operator=(const filter& a) = default;
+		constexpr filter& operator=(filter&& a) = default;
+		constexpr ~filter() = default;
+
+		constexpr bool operator==(const filter& a) const
+		{
+			return i == a.i; // P is part of type
+		}
+
+		constexpr explicit operator bool() const
+		{
+			return i.operator bool();
+		}
+		constexpr value_type operator*() const
+		{
+			return *i;
+		}
+		constexpr filter& operator++() noexcept
+		{
+			++i;
+			next();
+
+			return *this;
+		}
+		constexpr filter operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
 
 
 

@@ -34,6 +34,7 @@ int drop_test()
 
 int iota_test()
 {
+	static_assert(std::input_iterator<iota<int>>);
 	{
 		iota i(1);
 		assert(i);
@@ -240,6 +241,10 @@ int merge_test()
 	return 0;
 }
 
+bool is_even(int i) {
+	return i % 2 == 0;
+}
+
 int apply_test()
 {
 	{
@@ -250,6 +255,36 @@ int apply_test()
 		assert(!(i2 != i));
 
 		assert(vector(i) == std::vector({ 2,3,4 }));
+	}
+	{
+		auto i = apply(is_even, take(iota(1), 3));
+		auto i2{ i };
+		assert(i == i2);
+		i = i2;
+		assert(!(i2 != i));
+
+		assert(vector(i) == std::vector<bool>({ false,true,false }));
+	}
+
+	return 0;
+}
+
+int filter_test()
+{
+	{
+		auto f = filter(is_even, interval(iota(1), iota(1) + 6));
+		auto f2{ f };
+		assert(f == f2);
+		f = f2;
+		assert(!(f2 != f));
+
+		assert(f);
+		assert(*f == 2);
+		++f;
+		assert(*f == 4);
+		assert(*f++ == 4);
+		assert(*f == 6);
+		assert(!++f);
 	}
 
 	return 0;
@@ -265,6 +300,7 @@ int main()
 	concatenate_test();
 	merge_test();
 	apply_test();
+	filter_test();
 
 	return 0;
 }
