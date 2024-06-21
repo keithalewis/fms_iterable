@@ -3,39 +3,26 @@
 #include <compare>
 #include <concepts>
 #include <iterator>
+#include <utility>
 
 namespace fms::iterable {
 
-	template<class I>
-	concept input_iterable = std::input_iterator<I> &&
-		requires(I i) {
+	template <class I>
+	concept has_op_bool = requires(I i) {
 		{ i.operator bool() } -> std::same_as<bool>;
 	};
-	template<class I, class T>
-	concept output_iterable = std::output_iterator<I, T> &&
-		requires(I i) {
-			{ i.operator bool() } -> std::same_as<bool>;
-	};
-	template<class I>
-	concept forward_iterable = std::forward_iterator<I> &&
-		requires(I i) {
-			{ i.operator bool() } -> std::same_as<bool>;
-	};
-	template<class I>
-	concept bidirectional_iterable = std::bidirectional_iterator<I> &&
-		requires(I i) {
-			{ i.operator bool() } -> std::same_as<bool>;
-	};
-	template<class I>
-	concept random_access_iterable = std::random_access_iterator<I> &&
-		requires(I i) {
-			{ i.operator bool() } -> std::same_as<bool>;
-	};
-	template<class I>
-	concept contiguous_iterable = std::contiguous_iterator<I> &&
-		requires(I i) {
-			{ i.operator bool() } -> std::same_as<bool>;
-	};
+	template<class I> concept input_iterable 
+		= std::input_iterator<I> && has_op_bool<I>;
+	template<class I, class T> concept output_iterable 
+		= std::output_iterator<I, T> && has_op_bool<I>;
+	template<class I> concept forward_iterable 
+		= std::forward_iterator<I> && has_op_bool<I>;
+	template<class I> concept bidirectional_iterable 
+		= std::bidirectional_iterator<I> && has_op_bool<I>;
+	template<class I> concept random_access_iterable 
+		= std::random_access_iterator<I> && has_op_bool<I>;
+	template<class I> concept contiguous_iterable 
+		= std::contiguous_iterator<I> && has_op_bool<I>;
 
 	template <class I>
 	concept has_begin = requires(I i) {
@@ -67,6 +54,7 @@ namespace fms::iterable {
 
 		return !!i <=> !!j;
 	}
+	// All elements are equal.
 	template<class I, class J>
 	constexpr auto equal(I i, J j)
 	{
@@ -80,14 +68,16 @@ namespace fms::iterable {
 		if constexpr (has_back<I>) {
 			return i.back();
 		}
-
-		I _i(i);
-
-		while (++_i) {
-			i = _i;
+		else if constexpr (has_end<I> && std::bidirectional_iterator<I>) {
+			return --i.end();
 		}
-
-		return i;
+		else {
+			I _i(i);
+			while (++_i) {
+				i = _i;
+			}
+			return i;
+		}
 	}
 
 	// For use with STL
@@ -97,8 +87,9 @@ namespace fms::iterable {
 		if constexpr (has_begin<I>) {
 			return i.begin();
 		}
-
-		return i;
+		else {
+			return i;
+		}
 	}
 	// ++back(i)
 	template <class I>
@@ -107,41 +98,217 @@ namespace fms::iterable {
 		if constexpr (has_end<I>) {
 			return i.end();
 		}
-
-		while (i) {
-			++i;
+		else {
+			while (i) {
+				++i;
+			}
+			return i;
 		}
-
-		return i;
 	}
 
 	// size(i, size(j)) = size(i) + size(j)
 	template <class I>
 	constexpr std::size_t size(I i, std::size_t n = 0) noexcept
 	{
-		/*
 		if constexpr (has_size<I>) {
 			return i.size();
 		}
-		if constexpr (has_end<I>) {
+		else if constexpr (has_end<I>) {
 			return n + std::distance(i, i.end());
 		}
-		*/
+		else {
+			while (i++) {
+				++n;
+			}
 
-		while (i++) {
-			++n;
+			return n;
 		}
-
-		return n;
 	}
 
 	// Drop at most n from the beginning.
 	template <class I>
-	constexpr I next(I i, std::size_t n) noexcept
+	constexpr I drop(I i, std::size_t n) noexcept
 	{
-		return std::next(i, std::min(n, size(i)));
+		if constexpr (has_end<I>) {
+			return std::next(i, std::min(n, size(i)));
+		}
+		else {
+			while (n-- && i) {
+				++i;
+			}
+
+			return i;
+		}
 	}
 
+	// t, t + 1, ...
+	template<class T>
+	class iota {
+		T t;
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = std::ptrdiff_t;
+
+		constexpr iota(T t = 0)
+			: t(t)
+		{ }
+
+		constexpr auto operator<=>(const iota&) const = default;
+
+		constexpr explicit operator bool() const noexcept
+		{
+			return true;
+		}
+		constexpr value_type operator*() const noexcept
+		{
+			return t;
+		}
+		constexpr iota& operator++() noexcept
+		{
+			++t;
+
+			return *this;
+		}
+		constexpr iota operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
+	// tn, tn*t, tn*t*t, ...
+	template <class T>
+	class power {
+		T t, tn;
+
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = std::ptrdiff_t;
+
+		power(T t, T tn = 1)
+			: t(t), tn(tn)
+		{ }
+
+		bool operator==(const power& p) const = default;
+
+		explicit operator bool() const noexcept
+		{
+			return true;
+		}
+		value_type operator*() const noexcept
+		{
+			return tn;
+		}
+		power& operator++() noexcept
+		{
+			tn *= t;
+
+			return *this;
+		}
+		power operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
+
+	// 1, 1, 1*2, 1*2*3, ...
+	template <class T = double>
+	class factorial {
+		T t, n;
+
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = std::ptrdiff_t;
+
+		factorial(T t = 1)
+			: t(t), n(1)
+		{ }
+
+		bool operator==(const factorial& f) const = default;
+
+		explicit operator bool() const noexcept
+		{
+			return true;
+		}
+		value_type operator*() const noexcept
+		{
+			return t;
+		}
+		factorial& operator++() noexcept
+		{
+			t *= n++;
+
+			return *this;
+		}
+		factorial operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
+
+	// 1, n, n*(n-1)/2, ..., 1
+	template <class T = std::size_t>
+	class choose {
+		T n, k, nk;
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = std::ptrdiff_t;
+
+		choose(T n)
+			: n(n), k(0), nk(1)
+		{ }
+
+		bool operator==(const choose& c) const = default;
+
+		explicit operator bool() const noexcept
+		{
+			return k <= n;
+		}
+		value_type operator*() const noexcept
+		{
+			return nk;
+		}
+		choose& operator++() noexcept
+		{
+			if (operator bool()) {
+				nk *= n - k;
+				++k;
+				nk /= k;
+			}
+
+			return *this;
+		}
+		choose operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
 
 	// Unsafe pointer iterable with std::span/view semantics.
 	template<class T>
@@ -154,7 +321,7 @@ namespace fms::iterable {
 		using reference = T&;
 		using pointer = T*;
 		using difference_type = std::ptrdiff_t;
-		
+
 		constexpr ptr(T* p = nullptr)
 			: p(p)
 		{ }
@@ -200,7 +367,7 @@ namespace fms::iterable {
 		constexpr ptr operator++(int) noexcept
 		{
 			auto tmp{ *this };
-			
+
 			operator++();
 
 			return tmp;
@@ -215,7 +382,7 @@ namespace fms::iterable {
 		constexpr ptr operator--(int) noexcept
 		{
 			auto tmp{ *this };
-			
+
 			operator--();
 
 			return tmp;
@@ -372,6 +539,11 @@ namespace fms::iterable {
 
 			return *this;
 		}
+		constexpr difference_type operator-(const interval& i) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return b - i.b;
+		}
 		constexpr interval operator-(difference_type i) const noexcept
 			requires std::random_access_iterator<I>
 		{
@@ -406,7 +578,7 @@ namespace fms::iterable {
 	template<class C>
 	constexpr auto make_interval(C& c)
 	{
-		return interval(std::begin(c), std::end(c));
+		return interval(c.begin(), c.end());
 	}
 
 	// Assumes lifetime of a.
@@ -419,7 +591,7 @@ namespace fms::iterable {
 	template<class I>
 	constexpr auto take(I i, std::size_t n)
 	{
-		return interval(i, std::next(i, n));
+		return interval(i, drop(i, n));
 	}
 
 	// Cycle over iterator values.
@@ -460,7 +632,7 @@ namespace fms::iterable {
 			return *i;
 		}
 		constexpr reference operator*() noexcept
-			requires std::indirectly_writable<I,value_type>
+			requires std::indirectly_writable<I, value_type>
 		{
 			return *i;
 		}
@@ -492,10 +664,10 @@ namespace fms::iterable {
 		using pointer = T*;
 		using difference_type = std::ptrdiff_t;
 
-		constexpr constant() = default;	
+		constexpr constant() = default;
 		constexpr constant(T t)
 			: t(t)
-		{ }	
+		{ }
 
 		constexpr auto operator<=>(const constant&) const = default;
 
@@ -528,6 +700,238 @@ namespace fms::iterable {
 	{
 		return take(constant<T>(t), 1);
 	}
+
+	// i0 then i1
+	template <class I0, class I1, 
+		class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
+	class concatenate2 {
+		I0 i0;
+		I1 i1;
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = std::common_type_t<typename I0::difference_type, typename I1::difference_type>;
+
+		constexpr concatenate2() = default;
+		constexpr concatenate2(const I0& i0, const I1& i1)
+			: i0(i0), i1(i1)
+		{ }
+		constexpr concatenate2(const concatenate2&) = default;
+		constexpr concatenate2& operator=(const concatenate2&) = default;
+		constexpr concatenate2(concatenate2&&) = default;
+		constexpr concatenate2& operator=(concatenate2&&) = default;
+		constexpr ~concatenate2() = default;
+
+		constexpr bool operator==(const concatenate2& i) const = default;
+
+		constexpr explicit operator bool() const
+		{
+			return i0 || i1;
+		}
+		constexpr value_type operator*() const
+		{
+			return i0 ? *i0 : *i1;
+		}
+		constexpr concatenate2& operator++()
+		{
+			if (i0) {
+				++i0;
+			}
+			else {
+				++i1;
+			}
+
+			return *this;
+		}
+		constexpr concatenate2 operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
+	template<class I>
+	constexpr auto concatenate(I i)
+	{
+		return i;
+	}
+	template<class I, class ...Is>
+	constexpr auto concatenate(I i, Is... is)
+	{
+		return concatenate2(i, concatenate(is...));
+	}
+
+	// Sorted i0 and i1 in order. Equivalent (!< and !>) elements are repeated.
+	template <class I0, class I1, 
+		class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
+	class merge2 {
+		I0 i0;
+		I1 i1;
+		bool _0; // true use i0, false use i1
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = std::common_type_t<typename I0::difference_type, typename I0::difference_type>;
+
+		constexpr merge2() = default;
+		constexpr merge2(const I0& i0, const I1& i1)
+			: i0(i0), i1(i1)
+		{
+			if (i0 && i1) {
+				if (*i1 < *i0) {
+					_0 = false;
+				}
+				else { // less or equivalent
+					_0 = true;
+				}
+			}
+			else if (i0) {
+				_0 = true;
+			}
+			else {
+				_0 = false;
+			}
+		}
+		constexpr merge2(const merge2&) = default;
+		constexpr merge2& operator=(const merge2&) = default;
+		constexpr merge2(merge2&&) = default;
+		constexpr merge2& operator=(merge2&&) = default;
+		constexpr ~merge2() = default;
+
+		constexpr bool operator==(const merge2& i) const = default;
+
+		constexpr explicit operator bool() const
+		{
+			return i0 || i1;
+		}
+		constexpr value_type operator*() const
+		{
+			if (i0 && i1) {
+				if (*i0 < *i1) {
+					return *i0;
+				}
+				else if (*i1 < *i0) {
+					return *i1;
+				}
+				else {
+					return _0 ? *i0 : *i1;
+				}
+			}
+
+			return i0 ? *i0 : *i1;
+		}
+		constexpr merge2& operator++()
+		{
+			if (i0 && i1) {
+				if (*i0 < *i1) {
+					++i0;
+				}
+				else if (*i1 < *i0) {
+					++i1;
+				}
+				else { // equivalent
+					if (_0) {
+						++i0;
+					}
+					else {
+						++i1;
+					}
+					_0 = !_0; // switch
+				}
+			}
+			else {
+				if (i0) {
+					++i0;
+					_0 = true;
+				}
+				else if (i1) {
+					++i1;
+					_0 = false;
+				}
+			}
+
+
+			return *this;
+		}
+		constexpr merge2 operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
+	template<class I>
+	constexpr auto merge(I i)
+	{
+		return i;
+	}
+	template<class I, class ...Is>
+	constexpr auto merge(I i, Is... is)
+	{
+		return merge2(i, merge(is...));
+	}
+
+	// Apply a function to elements of an iterable.
+	template <class F, class I, class T = typename I::value_type,
+		class U = std::invoke_result_t<F, T>>
+		class apply {
+		F f;
+		I i;
+		public:
+			using iterator_category = std::input_iterator_tag;
+			using value_type = U;
+			using reference = U&;
+			using pointer = U*;
+			using difference_type = typename I::difference_type;
+
+			constexpr apply() = default;
+			constexpr apply(const F& f, const I& i)
+				: f(f), i(i)
+			{ }
+			constexpr apply(const apply& a) = default;
+			constexpr apply(apply&& a) = default;
+			constexpr apply& operator=(const apply& a) = default;
+			constexpr apply& operator=(apply&& a) = default;
+			constexpr ~apply() = default;
+
+			constexpr bool operator==(const apply& a) const
+			{
+				return i == a.i;
+			}
+
+			constexpr explicit operator bool() const
+			{
+				return i.operator bool();
+			}
+			constexpr value_type operator*() const
+			{
+				return f(*i);
+			}
+			constexpr apply& operator++() noexcept
+			{
+				++i;
+
+				return *this;
+			}
+			constexpr apply operator++(int) noexcept
+			{
+				auto tmp{ *this };
+
+				operator++();
+
+				return tmp;
+			}
+	};
+
+
 
 
 } // namespace fms
