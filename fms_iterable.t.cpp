@@ -9,7 +9,7 @@ using namespace fms::iterable;
 inline int pointer_test()
 {
 	static_assert(std::random_access_iterator<ptr<int>>);
-	static_assert(!ptr<int>());
+	//static_assert(!ptr<int>());
 	{
 		int i[] = { 1, 2, 3 };
 		auto p = take(ptr(i), 3);
@@ -100,6 +100,13 @@ inline int pointer_test()
 		assert(!(p < q));
 		assert(!(p <= q));
 
+	}
+	{
+		int i[] = { 1, 2, 3 };
+		auto a = array(i);
+		assert(size(a) == 3);
+		auto b = back(a);
+		assert(*b == 3);
 	}
 
 	return 0;

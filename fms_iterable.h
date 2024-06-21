@@ -2,9 +2,7 @@
 #pragma once
 #include <compare>
 #include <concepts>
-#include <initializer_list>
 #include <iterator>
-#include <utility>
 
 namespace fms::iterable {
 
@@ -39,6 +37,23 @@ namespace fms::iterable {
 			{ i.operator bool() } -> std::same_as<bool>;
 	};
 
+	template <class I>
+	concept has_begin = requires(I i) {
+		{ i.begin() } -> std::same_as<I>;
+	};
+	template <class I>
+	concept has_end = requires(I i) {
+		{ i.end() } -> std::same_as<I>;
+	};
+	template <class I>
+	concept has_back = requires(I i) {
+		{ i.back() } -> std::same_as<I>;
+	};
+	template <class I>
+	concept has_size = requires(I i) {
+		{ i.size() } -> std::same_as<std::size_t>;
+	};
+
 	// Compare elements of two iterables
 	template<class I, class J>
 	constexpr auto compare(I i, J j)
@@ -51,6 +66,80 @@ namespace fms::iterable {
 		}
 
 		return !!i <=> !!j;
+	}
+	template<class I, class J>
+	constexpr auto equal(I i, J j)
+	{
+		return compare(i, j) == 0;
+	}
+
+	// Last element of iterable.
+	template <class I>
+	constexpr I back(I i)
+	{
+		if constexpr (has_back<I>) {
+			return i.back();
+		}
+
+		I _i(i);
+
+		while (++_i) {
+			i = _i;
+		}
+
+		return i;
+	}
+
+	// For use with STL
+	template <class I>
+	constexpr I begin(I i)
+	{
+		if constexpr (has_begin<I>) {
+			return i.begin();
+		}
+
+		return i;
+	}
+	// ++back(i)
+	template <class I>
+	constexpr I end(I i)
+	{
+		if constexpr (has_end<I>) {
+			return i.end();
+		}
+
+		while (i) {
+			++i;
+		}
+
+		return i;
+	}
+
+	// size(i, size(j)) = size(i) + size(j)
+	template <class I>
+	constexpr std::size_t size(I i, std::size_t n = 0) noexcept
+	{
+		/*
+		if constexpr (has_size<I>) {
+			return i.size();
+		}
+		if constexpr (has_end<I>) {
+			return n + std::distance(i, i.end());
+		}
+		*/
+
+		while (i++) {
+			++n;
+		}
+
+		return n;
+	}
+
+	// Drop at most n from the beginning.
+	template <class I>
+	constexpr I next(I i, std::size_t n) noexcept
+	{
+		return std::next(i, std::min(n, size(i)));
 	}
 
 
@@ -185,12 +274,17 @@ namespace fms::iterable {
 
 	// Iterable over [begin(), end()).
 	template<class I>
-	class interval : public I {
-		I e;
+	class interval {
+		I b, e;
 	public:
-		constexpr interval() = default;
+		using iterator_category = typename I::iterator_category;
+		using value_type = typename I::value_type;
+		using reference = typename I::reference;
+		using pointer = typename I::pointer;
+		using difference_type = typename I::difference_type;
+
 		constexpr interval(I b, I e)
-			: I(b), e(e)
+			: b(b), e(e)
 		{ }
 		constexpr interval(const interval&) = default;
 		constexpr interval& operator=(const interval&) = default;
@@ -198,7 +292,7 @@ namespace fms::iterable {
 		constexpr interval& operator=(interval&&) = default;
 		constexpr ~interval() = default;
 
-		constexpr auto operator<=>(const interval& i) const = default;
+		/*constexpr*/ auto operator<=>(const interval& i) const = default;
 
 		constexpr interval begin() const
 		{
@@ -211,9 +305,102 @@ namespace fms::iterable {
 
 		constexpr explicit operator bool() const noexcept
 		{
-			return *this != e;
+			return b != e;
+		}
+		// indirectly readable
+		constexpr value_type operator*() const noexcept
+		{
+			return *b;
+		}
+		// indirectly writable
+		constexpr reference operator*() noexcept
+			requires std::indirectly_writable<I, value_type>
+		{
+			return *b;
+		}
+		// weakly incrementable
+		constexpr interval& operator++() noexcept
+		{
+			if (b != e) {
+				++b;
+			}
+
+			return *this;
+		}
+		constexpr interval operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+		// bidirectional
+		constexpr interval& operator--() noexcept
+			requires std::bidirectional_iterator<I>
+		{
+			--b;
+
+			return *this;
+		}
+		constexpr interval operator--(int) noexcept
+			requires std::bidirectional_iterator<I>
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
+		// random access
+		constexpr interval& operator+=(difference_type i) noexcept
+			requires std::random_access_iterator<I>
+		{
+			b += i;
+
+			return *this;
+		}
+		constexpr interval operator+(difference_type i) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return interval(b + i, e);
+		}
+		constexpr interval& operator-=(difference_type i) noexcept
+			requires std::random_access_iterator<I>
+		{
+			b -= i;
+
+			return *this;
+		}
+		constexpr interval operator-(difference_type i) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return interval(b - i, e);
+		}
+		reference operator[](difference_type i) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return b[i];
+		}
+		reference operator[](difference_type i) noexcept
+			requires std::random_access_iterator<I>
+		{
+			return b[i];
 		}
 	};
+	template<class I>
+		requires std::random_access_iterator<I>
+	constexpr interval<I> operator+(std::ptrdiff_t d, interval<I> p) noexcept
+	{
+		return p + d;
+	}
+	template<class I>
+		requires std::random_access_iterator<I>
+	constexpr interval<I> operator-(std::ptrdiff_t d, interval<I> p) noexcept
+	{
+		return p - d;
+	}
+
 
 	// Assumes lifetime of container.
 	template<class C>
