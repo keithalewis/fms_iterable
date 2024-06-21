@@ -367,3 +367,4 @@ FodyWeavers.xsd
 /build/fms_iterable.t
 /build/Testing/Temporary/CTestCostData.txt
 /.fms_iterable.t.cpp.swp
+*.swp
