@@ -25,7 +25,7 @@ int drop_test()
 		int i[] = { 1, 2, 3 };
 		auto a = array(i);
 		assert(equal(drop(a, 0), a));
-		assert(equal(drop(a, 1), take(iota(2), 2)));
+		assert(equal(drop(a, 1), counted(iota(2), 2)));
 		assert(equal(drop(a, 3), empty<int>()));
 		assert(equal(drop(a, 4), empty<int>()));
 	}
@@ -51,9 +51,9 @@ int iota_test()
 		assert(*i == 3);
 	}
 	{
-		assert(vector(take(iota(1), 3)) == std::vector({ 1,2,3 }));
-		assert(vector(take(power(2), 3)) == std::vector({ 1,2,4 }));
-		assert(vector(take(factorial(1), 4)) == std::vector({ 1,1,2,6 }));
+		assert(vector(counted(iota(1), 3)) == std::vector({ 1,2,3 }));
+		assert(vector(counted(power(2), 3)) == std::vector({ 1,2,4 }));
+		assert(vector(counted(factorial(1), 4)) == std::vector({ 1,1,2,6 }));
 		assert(vector(choose(3)) == std::vector({ 1,3,3,1 }));
 	}
 
@@ -66,7 +66,7 @@ int pointer_test()
 	static_assert(!ptr<int>());
 	{
 		int i[] = { 1, 2, 3 };
-		auto p = take(ptr(i), 3);
+		auto p = counted(ptr(i), 3);
 		auto p2{ p };
 		assert(p == p2);
 		p = p2;
@@ -148,7 +148,7 @@ int pointer_test()
 	{
 		int i[] = { 1, 2, 3 };
 		auto p = array(i);
-		auto q = take(ptr(i), 2);
+		auto q = counted(ptr(i), 2);
 		// p and q have pointers to the same array
 		assert(p != q);
 		assert(p > q);
@@ -180,9 +180,9 @@ int interval_test()
 		auto i = interval(v.begin(), v.end());
 		auto j = make_interval(l);
 		assert(equal(i, j));
-		assert(compare(take(i, 2), take(j, 2)) == 0);
-		assert(compare(take(i, 3), take(j, 2)) > 0);
-		assert(compare(take(i, 2), take(j, 3)) < 0);
+		assert(compare(counted(i, 2), counted(j, 2)) == 0);
+		assert(compare(counted(i, 3), counted(j, 2)) > 0);
+		assert(compare(counted(i, 2), counted(j, 3)) < 0);
 
 		i += 2;
 		// j += 2; // list not random access
@@ -201,10 +201,31 @@ int interval_test()
 	return 0;
 }
 
+int counted_test()
+{
+	{
+		auto c = counted(iota(1), 3);
+		auto c2{ c };
+		assert(c == c2);
+		c = c2;
+		assert(!(c2 != c));
+
+		assert(*c == 1);
+		++c;
+		assert(*c == 2);
+		assert(*c++ == 2);
+		assert(*c == 3);
+		++c;
+		assert(!c);
+	}
+
+	return 0;
+}
+
 int repeat_test()
 {
 	{
-		assert(equal(take(constant(1), 3), take(repeat(once(1)), 3)));
+		assert(equal(counted(constant(1), 3), counted(repeat(once(1)), 3)));
 	}
 
 	return 0;
@@ -227,8 +248,8 @@ int constant_test()
 int concatenate_test()
 {
 	{
-		const auto i = concatenate(take(iota(1), 3), take(iota(4), 3));
-		assert(equal(i, take(iota(1), 6)));
+		const auto i = concatenate(counted(iota(1), 3), counted(iota(4), 3));
+		assert(equal(i, counted(iota(1), 6)));
 		assert(equal(i, concatenate(i, empty<int>())));
 		assert(equal(concatenate(i, empty<int>()), i));
 	}
@@ -239,17 +260,17 @@ int concatenate_test()
 int merge_test()
 {
 	{
-		const auto i = merge(take(iota(1), 3), take(iota(2), 3));
+		const auto i = merge(counted(iota(1), 3), counted(iota(2), 3));
 		assert(vector(i) == std::vector({ 1,2,2,3,3,4 }));
 		assert(equal(i, merge(i, empty<int>())));
 		assert(equal(merge(i, empty<int>()), i));
 	}
 	{
-		const auto i = merge(take(iota(4), 3), take(iota(1), 3));
+		const auto i = merge(counted(iota(4), 3), counted(iota(1), 3));
 		assert(vector(i) == std::vector({ 1,2,3,4,5,6 }));
 	}
 	{
-		const auto i = merge(take(iota(3), 3), take(iota(1), 3));
+		const auto i = merge(counted(iota(3), 3), counted(iota(1), 3));
 		assert(vector(i) == std::vector({ 1,2,3,3,4,5 }));
 	}
 
@@ -263,7 +284,7 @@ bool is_even(int i) {
 int apply_test()
 {
 	{
-		auto i = apply([](int i) { return i + 1; }, take(iota(1), 3));
+		auto i = apply([](int i) { return i + 1; }, counted(iota(1), 3));
 		auto i2{ i };
 		assert(i == i2);
 		i = i2;
@@ -272,7 +293,7 @@ int apply_test()
 		assert(vector(i) == std::vector({ 2,3,4 }));
 	}
 	{
-		auto i = apply(is_even, take(iota(1), 3));
+		auto i = apply(is_even, counted(iota(1), 3));
 		auto i2{ i };
 		assert(i == i2);
 		i = i2;
@@ -287,7 +308,7 @@ int apply_test()
 int filter_test()
 {
 	{
-		auto f = filter(is_even, interval(iota(1), iota(1) + 6));
+		auto f = filter(is_even, counted(iota(1), 6));
 		auto f2{ f };
 		assert(f == f2);
 		f = f2;
@@ -326,9 +347,9 @@ int fold_test()
 {
 	{
 		auto f = fold(std::plus<int>{}, constant(1));
-		assert(equal(take(f, 3), take(iota(0), 3)));
-		assert(sum(take(iota(1), 4)) == 1 + 2 + 3 + 4);
-		assert(prod(take(iota(1), 4)) == 1 * 2 * 3 * 4);
+		assert(equal(counted(f, 3), counted(iota(0), 3)));
+		assert(sum(counted(iota(1), 4)) == 1 + 2 + 3 + 4);
+		assert(prod(counted(iota(1), 4)) == 1 * 2 * 3 * 4);
 	}
 
 	return 0;
@@ -338,10 +359,7 @@ int delta_test()
 {
 	{
 		auto d = delta(iota(0));
-		assert(*d == 1);
-		assert(*++d == 1);
-		assert(*++d == 1);
-		//assert(equal(take(d, 3), take(constant(1), 3)));
+		assert(equal(counted(d, 3), counted(constant(1), 3)));
 	}
 
 	return 0;
@@ -352,6 +370,7 @@ int main()
 	drop_test();
 	iota_test();
 	pointer_test();
+	counted_test();
 	interval_test();
 	repeat_test();
 	constant_test();
