@@ -338,7 +338,10 @@ int delta_test()
 {
 	{
 		auto d = delta(iota(0));
-		assert(equal(take(d, 3), take(constant(1), 3)));
+		assert(*d == 1);
+		assert(*++d == 1);
+		assert(*++d == 1);
+		//assert(equal(take(d, 3), take(constant(1), 3)));
 	}
 
 	return 0;

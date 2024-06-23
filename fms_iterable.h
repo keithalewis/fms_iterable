@@ -715,7 +715,10 @@ namespace fms::iterable {
 			: t(t)
 		{ }
 
-		constexpr auto operator<=>(const constant&) const = default;
+		constexpr auto operator<=>(const constant& c) const
+		{
+			return this <=> &c;
+		}
 
 		constexpr constant begin() const
 		{
@@ -1227,15 +1230,7 @@ namespace fms::iterable {
 	class delta {
 		D d;
 		I i;
-		T t, _t;
-		void init()
-		{
-			if (i) {
-				t = *i;
-				++i;
-				_t = i ? *i : t;
-			}
-		}
+		T t;
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = U;
@@ -1245,9 +1240,12 @@ namespace fms::iterable {
 
 		constexpr delta() = default;
 		constexpr delta(const I& _i, D _d = std::minus<T>{})
-			: d(_d), i(_i), t{}, _t{}
+			: d(_d), i(_i), t{}
 		{
-			init();
+			if (i) {
+				t = *i;
+				++i;
+			}
 		}
 		constexpr delta(const delta& _d) = default;
 		constexpr delta& operator=(const delta& _d) = default;
@@ -1257,7 +1255,7 @@ namespace fms::iterable {
 
 		constexpr bool operator==(const delta& _d) const
 		{
-			return i == _d.i && t == _d.t && _t == _d._t;
+			return i == _d.i && t == _d.t;
 		}
 
 		constexpr explicit operator bool() const
