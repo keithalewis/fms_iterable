@@ -138,7 +138,7 @@ namespace fms::iterable {
 			return std::next(i, std::min(n, size(i)));
 		}
 		else if constexpr (std::random_access_iterator<I>) {
-			return i + n; // could be passed end()
+			return i += n; // could be passed end()
 		}
 		else {
 			while (n-- && i) {
@@ -761,7 +761,7 @@ namespace fms::iterable {
 		{
 			return *this;
 		}
-		constant operator-(difference_type)
+		constant operator-(difference_type) const
 		{
 			return *this;
 		}
