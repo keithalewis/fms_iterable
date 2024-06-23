@@ -1,5 +1,6 @@
 // fms_iterable.t.cpp - test fms_iterable.h
 #include <cassert>
+#include <limits>
 #include <list>
 #include <vector>
 #include "fms_iterable.h"
@@ -209,6 +210,20 @@ int repeat_test()
 	return 0;
 }
 
+int constant_test()
+{
+	static_assert(std::random_access_iterator<constant<int>>);
+	{
+		constant c(1);
+		auto c2{ c };
+		assert(c2 == c);
+		c = c2;
+		assert(!(c2 != c));
+	}
+
+	return 0;
+}
+
 int concatenate_test()
 {
 	{
@@ -290,6 +305,45 @@ int filter_test()
 	return 0;
 }
 
+int until_test()
+{
+	{
+		const auto eps = [](double x) { return 1 + x == 1; };
+		auto u = until(eps, power(0.5));
+		auto u2{ u };
+		assert(u == u2);
+		u = u2;
+		assert(!(u2 != u));
+
+		auto n = size(u);
+		assert(n == std::numeric_limits<double>::digits);
+	}
+
+	return 0;
+}
+
+int fold_test()
+{
+	{
+		auto f = fold(std::plus<int>{}, constant(1));
+		assert(equal(take(f, 3), take(iota(0), 3)));
+		assert(sum(take(iota(1), 4)) == 1 + 2 + 3 + 4);
+		assert(prod(take(iota(1), 4)) == 1 * 2 * 3 * 4);
+	}
+
+	return 0;
+}
+
+int delta_test()
+{
+	{
+		auto d = delta(iota(0));
+		assert(equal(take(d, 3), take(constant(1), 3)));
+	}
+
+	return 0;
+}
+
 int main()
 {
 	drop_test();
@@ -297,10 +351,14 @@ int main()
 	pointer_test();
 	interval_test();
 	repeat_test();
+	constant_test();
 	concatenate_test();
 	merge_test();
 	apply_test();
 	filter_test();
+	until_test();
+	fold_test();
+	delta_test();
 
 	return 0;
 }

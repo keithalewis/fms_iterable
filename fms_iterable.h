@@ -11,6 +11,10 @@ namespace fms::iterable {
 	concept has_op_bool = requires(I i) {
 		{ i.operator bool() } -> std::same_as<bool>;
 	};
+	template <class I>
+	concept has_op_plus = requires(I i) {
+		{ i.operator+(std::declval<typename I::difference_type>) } -> std::same_as<I>;
+	};
 
 	template<class I> concept input_iterable
 		= std::input_iterator<I> && has_op_bool<I>;
@@ -133,6 +137,9 @@ namespace fms::iterable {
 		if constexpr (has_end<I>) {
 			return std::next(i, std::min(n, size(i)));
 		}
+		else if constexpr (std::random_access_iterator<I>) {
+			return i + n; // could be passed end()
+		}
 		else {
 			while (n-- && i) {
 				++i;
@@ -215,9 +222,9 @@ namespace fms::iterable {
 		{
 			return iota(t - d);
 		}
-		constexpr iota operator-(const iota& i) const noexcept
+		constexpr T operator-(const iota& i) const noexcept
 		{
-			return iota(t - i.t);
+			return t - i.t;
 		}
 	};
 	// tn, tn*t, tn*t*t, ...
@@ -450,6 +457,7 @@ namespace fms::iterable {
 		{
 			return p - i.p;
 		}
+		// TODO: value_type
 		reference operator[](difference_type i) const noexcept
 		{
 			return p[i];
@@ -696,7 +704,7 @@ namespace fms::iterable {
 	class constant {
 		T t;
 	public:
-		using iterator_category = std::forward_iterator_tag;
+		using iterator_category = std::random_access_iterator_tag;
 		using value_type = T;
 		using reference = T&;
 		using pointer = T*;
@@ -731,7 +739,62 @@ namespace fms::iterable {
 		{
 			return *this;
 		}
+		// bidirectional
+		constexpr constant& operator--()
+		{
+			return *this;
+		}
+		constexpr constant operator--(int)
+		{
+			return *this;
+		}
+		// random access
+		constant& operator+=(difference_type)
+		{
+			return *this;
+		}
+		constant operator+(difference_type) const
+		{
+			return *this;
+		}
+		constant& operator-=(difference_type)
+		{
+			return *this;
+		}
+		constant operator-(difference_type)
+		{
+			return *this;
+		}
+		difference_type operator-(const constant&) const
+		{
+			return 0;
+		}
+		value_type operator[](difference_type) const
+		{
+			return t;
+		}
+		reference operator[](difference_type)
+		{
+			return t;
+		}
 	};
+	template<class I>
+	constexpr constant<I> operator+(std::ptrdiff_t n, const constant<I>& i)
+	{
+		return i;
+	}
+	template<class I>
+	constexpr constant<I> operator-(std::ptrdiff_t n, const constant<I>& i)
+	{
+		return i;
+	}
+	/*
+	template<class I>
+	constexpr ptrdiff_t operator-(const constant<I>&, const constant<I>&)
+	{
+		return 0;
+	}
+	*/
 
 	template<class T>
 	constexpr auto once(T t)
@@ -1031,6 +1094,210 @@ namespace fms::iterable {
 		}
 	};
 
+	// Stop at first element satisfying predicate.
+	template <class P, class I, class T = typename I::value_type>
+	class until {
+		P p;
+		I i;
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = typename I::difference_type;
+
+		constexpr until() = default;
+		constexpr until(P p, const I& i)
+			: p(p), i(i)
+		{ }
+		constexpr until(const until&) = default;
+		constexpr until(until&&) = default;
+		constexpr until& operator=(const until&) = default;
+		constexpr until& operator=(until&&) = default;
+		constexpr ~until() = default;
+
+		constexpr bool operator==(const until& u) const
+		{
+			return i == u.i;
+		}
+
+		constexpr explicit operator bool() const
+		{
+			return i && !p(*i);
+		}
+		constexpr value_type operator*() const
+		{
+			return *i;
+		}
+		constexpr until& operator++() noexcept
+		{
+			++i;
+
+			return *this;
+		}
+		constexpr until operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
+
+	// Right fold: of op
+	template <class BinOp, class I, class T = typename I::value_type>
+	class fold {
+		BinOp op;
+		I i;
+		T t;
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = std::ptrdiff_t;
+
+		constexpr fold() = default;
+		constexpr fold(BinOp op, const I& i, T t = 0)
+			: op(op), i(i), t(t)
+		{ }
+		constexpr fold(const fold& f) = default;
+		constexpr fold& operator=(const fold& f) = default;
+		constexpr fold& operator=(fold&& f) noexcept = default;
+		constexpr ~fold() = default;
+
+		constexpr bool operator==(const fold& f) const
+		{
+			return i == f.i && t == f.t;
+		}
+
+		constexpr explicit operator bool() const
+		{
+			return i.operator bool();
+		}
+		constexpr value_type operator*() const noexcept
+		{
+			return t;
+		}
+		constexpr fold& operator++() noexcept
+		{
+			if (i) {
+				t = op(t, *i);
+				++i;
+			}
+
+			return *this;
+		}
+		constexpr fold operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
+
+	template <class I, class T = typename I::value_type>
+	inline auto sum(I i, T t = 0)
+	{
+		while (i) {
+			t += *i;
+			++i;
+		}
+
+		return t;
+	}
+
+	template <class I, class T = typename I::value_type>
+	inline auto prod(I i, T t = 1)
+	{
+		while (i) {
+			t *= *i;
+			++i;
+		}
+
+		return t;
+	}
+
+	// d(i[1], i[0]), d(i[2], i[1]), ...
+	template <class I, class T = typename I::value_type, class D = std::minus<T>, 
+		typename U = std::invoke_result_t<D, T, T>>
+	class delta {
+		D d;
+		I i;
+		T t, _t;
+		void init()
+		{
+			if (i) {
+				t = *i;
+				++i;
+				_t = i ? *i : t;
+			}
+		}
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = U;
+		using reference = U&;
+		using pointer = U*;
+		using difference_type = std::ptrdiff_t;
+
+		constexpr delta() = default;
+		constexpr delta(const I& _i, D _d = std::minus<T>{})
+			: d(_d), i(_i), t{}, _t{}
+		{
+			init();
+		}
+		constexpr delta(const delta& _d) = default;
+		constexpr delta& operator=(const delta& _d) = default;
+		constexpr delta(delta&& _d) = default;
+		constexpr delta& operator=(delta&& _d) = default;
+		constexpr ~delta() = default;
+
+		constexpr bool operator==(const delta& _d) const
+		{
+			return i == _d.i && t == _d.t && _t == _d._t;
+		}
+
+		constexpr explicit operator bool() const
+		{
+			return i.operator bool();
+		}
+		constexpr value_type operator*() const
+		{
+			return d(*i, t);
+		}
+		constexpr delta& operator++() noexcept
+		{
+			if (i) {
+				t = *i;
+				++i;
+			}
+
+			return *this;
+		}
+		constexpr delta operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
+
+	// uptick + downtick = delta
+	template <class I, class T = typename I::value_type>
+	inline auto uptick(I i)
+	{
+		return delta(i, [](T a, T b) { return std::max<T>(b - a, 0); });
+	}
+	template <class I, class T = typename I::value_type>
+	inline auto downtick(I i)
+	{
+		return delta(i, [](T a, T b) { return std::min<T>(b - a, 0); });
+	}
 
 
 } // namespace fms
