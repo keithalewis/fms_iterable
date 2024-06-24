@@ -203,6 +203,7 @@ int interval_test()
 
 int counted_test()
 {
+	static_assert(std::random_access_iterator<counted<ptr<int>>>);
 	{
 		auto c = counted(iota(1), 3);
 		auto c2{ c };

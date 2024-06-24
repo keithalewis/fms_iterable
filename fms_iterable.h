@@ -484,7 +484,7 @@ namespace fms::iterable {
 			return n != 0;
 		}
 		// indirectly readable
-		constexpr value_type operator*() const noexcept
+		constexpr reference operator*() const noexcept
 		{
 			return *i;
 		}
