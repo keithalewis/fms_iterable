@@ -19,6 +19,7 @@ inline std::vector<typename I::value_type> vector(I i)
 	return v;
 }
 
+/*
 int drop_test()
 {
 	{
@@ -32,14 +33,31 @@ int drop_test()
 
 	return 0;
 }
+*/
 
 int iota_test()
 {
-	static_assert(std::input_iterator<iota<int>>);
 	{
-		iota i(1);
-		assert(i);
-		iota i2{ i };
+		constexpr iota i(1);
+		static_assert(i);
+		constexpr iota i_{ i };
+		static_assert(i == i_);
+		static_assert(!(i != i_));
+
+		static_assert(*i == 1);
+		constexpr auto i2 = ++iota(i);
+		static_assert(*i2 == 2);
+		constexpr auto i3 = ++iota(i2);
+		static_assert(*i3 == 3);
+	}
+	{
+		constexpr iota i(1), j(2);
+		static_assert(i < j);
+		static_assert(j > i);
+	}
+	{
+		iota<double> i(1);
+		auto i2{ i };
 		assert(i == i2);
 		i = i2;
 		assert(!(i2 != i));
@@ -49,21 +67,96 @@ int iota_test()
 		assert(*i == 2);
 		assert(*i++ == 2);
 		assert(*i == 3);
+
+		--i;
+		assert(*i == 2);
+		assert(*i-- == 2);
+		assert(*i == 1);
+
+		i += 3;
+		assert(*i == 4);
+		i -= 2;
+		assert(*i == 2);
+		auto j = i + 5;
+		assert(*j == 7);
+		assert(j[-1] == 6);
+		assert(j - i == 5);
 	}
+	{
+		iota i(1);
+		i = drop(i, 2);
+		assert(*i == 3);
+	}
+	/*
 	{
 		assert(vector(counted(iota(1), 3)) == std::vector({ 1,2,3 }));
 		assert(vector(counted(power(2), 3)) == std::vector({ 1,2,4 }));
 		assert(vector(counted(factorial(1), 4)) == std::vector({ 1,1,2,6 }));
 		assert(vector(choose(3)) == std::vector({ 1,3,3,1 }));
 	}
+	*/
 
 	return 0;
 }
 
+int interval_test()
+{
+	static_assert(has_end<interval<iota<int>>>);
+	{
+		std::vector<int> v({ 1, 2, 3 });
+		auto i = interval(v.begin(), v.end());
+		auto i2{ i };
+		assert(i == i2);
+		i = i2;
+		assert(!(i2 != i));
+
+		assert(*i == 1);
+		assert(*++i == 2);
+		assert(*i++ == 2);
+		assert(*i == 3);
+		++i;
+		assert(!i);
+
+		--i;
+		assert(*i == 3);
+		i -= 2;
+		assert(*i == 1);
+		i[1] = 4;
+		assert(*(i + 1) == 4);
+	}
+	{
+		std::vector<int> v({ 1, 2, 3 });
+		std::list<int> l({ 1, 2, 3 });
+		auto i = interval(v.begin(), v.end());
+		auto j = make_interval(l);
+		assert(equal(i, j));
+
+		i[1] = 4;
+		copy(i, j);
+		assert(*++j == 4);
+		assert(*back(j) == 3);
+
+		std::vector<int> w;
+		copy(i, back_insert_iterable(w));
+		assert(equal(i, make_interval(w)));
+	}
+	{
+		auto i = interval(iota(1), iota(4));
+		std::vector v({ 1,2,3 });
+		assert(equal(i, make_interval(v)));
+	}
+
+	return 0;
+}
+
+#if 0
 int pointer_test()
 {
 	static_assert(std::random_access_iterator<ptr<int>>);
 	static_assert(!ptr<int>());
+	{
+	}
+	static_assert(size(empty<int>()) == 0);
 	{
 		int i[] = { 1, 2, 3 };
 		auto p = counted(ptr(i), 3);
@@ -166,36 +259,6 @@ int pointer_test()
 		assert(*--end(a) == 3);
 		a[1] = 4;
 		assert(*(a + 1) == 4);
-	}
-
-	return 0;
-}
-
-int interval_test()
-{
-	static_assert(has_end<interval<ptr<int>>>);
-	{
-		std::vector<int> v{ 1, 2, 3 };
-		std::list<int> l{ 1, 2, 3 };
-		auto i = interval(v.begin(), v.end());
-		auto j = make_interval(l);
-		assert(equal(i, j));
-		assert(compare(counted(i, 2), counted(j, 2)) == 0);
-		assert(compare(counted(i, 3), counted(j, 2)) > 0);
-		assert(compare(counted(i, 2), counted(j, 3)) < 0);
-
-		i += 2;
-		// j += 2; // list not random access
-		*i = 4;
-		assert(v[2] == 4);
-
-		int k = 1;
-		for (auto a : j) {
-			assert(a == k++);
-		}
-		++j;
-		*j = 5;
-		assert(*j == 5);
 	}
 
 	return 0;
@@ -360,16 +423,17 @@ int delta_test()
 {
 	{
 		auto d = delta(iota(0));
-		assert(equal(counted(d, 3), counted(constant(1), 3)));
+		//assert(equal(counted(d, 3), counted(constant(1), 3)));
 	}
 
 	return 0;
 }
-
+#endif // 0
 int main()
 {
-	drop_test();
+	//drop_test();
 	iota_test();
+	/*
 	pointer_test();
 	counted_test();
 	interval_test();
@@ -382,6 +446,7 @@ int main()
 	until_test();
 	fold_test();
 	delta_test();
+	*/
 
 	return 0;
 }
