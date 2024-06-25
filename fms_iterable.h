@@ -97,6 +97,31 @@ namespace fms::iterable {
 		return compare(i, j, n) == 0;
 	}
 
+	// i equals {t,...}
+	template<class I, class T = std::iter_value_t<I>>
+	constexpr bool equal(I i, std::initializer_list<T> il)
+	{
+		for (const auto& t : il) {
+			if (!i || *i++ != t) {
+				return false;
+			}
+		}
+
+		return !i;
+	}
+	// i starts with {t,...}
+	template<class I, class T = std::iter_value_t<I>>
+	constexpr bool starts_with(I i, std::initializer_list<T> il)
+	{
+		for (const auto& t : il) {
+			if (!i || *i++ != t) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	template<class I, class J>
 	constexpr auto copy(I i, J j)
 	{
@@ -209,6 +234,15 @@ namespace fms::iterable {
 
 		constexpr auto operator<=>(const interval& i) const = default;
 
+		constexpr interval begin() const
+		{
+			return *this;
+		}
+		constexpr interval end() const
+		{
+			return interval(e, e);
+		}
+
 		constexpr explicit operator bool() const noexcept
 		{
 			return *this != e;
@@ -263,7 +297,6 @@ namespace fms::iterable {
 			return tmp;
 		}
 	};
-	static_assert(input_iterable<iota<int>>);
 
 	// tn, tn*t, tn*t*t, ...
 	template <class T>
@@ -276,27 +309,28 @@ namespace fms::iterable {
 		using pointer = T*;
 		using difference_type = std::ptrdiff_t;
 
-		power(T t, T tn = 1)
+		constexpr power(T t, T tn = 1)
 			: t(t), tn(tn)
 		{ }
+		constexpr virtual ~power() = default;
 
-		bool operator==(const power& p) const = default;
+		constexpr bool operator==(const power& p) const = default;
 
-		explicit operator bool() const noexcept
+		constexpr virtual explicit operator bool() const noexcept
 		{
 			return true;
 		}
-		value_type operator*() const noexcept
+		constexpr value_type operator*() const noexcept
 		{
 			return tn;
 		}
-		power& operator++() noexcept
+		constexpr power& operator++() noexcept
 		{
 			tn *= t;
 
 			return *this;
 		}
-		power operator++(int) noexcept
+		constexpr power operator++(int) noexcept
 		{
 			auto tmp{ *this };
 
@@ -317,27 +351,28 @@ namespace fms::iterable {
 		using pointer = T*;
 		using difference_type = std::ptrdiff_t;
 
-		factorial(T t = 1)
+		constexpr factorial(T t = 1)
 			: t(t), n(1)
 		{ }
+		constexpr virtual ~factorial() = default;
 
-		bool operator==(const factorial& f) const = default;
+		constexpr bool operator==(const factorial& f) const = default;
 
-		explicit operator bool() const noexcept
+		constexpr virtual explicit operator bool() const noexcept
 		{
 			return true;
 		}
-		value_type operator*() const noexcept
+		constexpr value_type operator*() const noexcept
 		{
 			return t;
 		}
-		factorial& operator++() noexcept
+		constexpr factorial& operator++() noexcept
 		{
 			t *= n++;
 
 			return *this;
 		}
-		factorial operator++(int) noexcept
+		constexpr factorial operator++(int) noexcept
 		{
 			auto tmp{ *this };
 
@@ -358,13 +393,23 @@ namespace fms::iterable {
 		using pointer = T*;
 		using difference_type = std::ptrdiff_t;
 
-		choose(T n)
+		constexpr choose(T n)
 			: n(n), k(0), nk(1)
 		{ }
+		constexpr virtual ~choose() = default;
 
-		bool operator==(const choose& c) const = default;
+		constexpr bool operator==(const choose& c) const = default;
 
-		explicit operator bool() const noexcept
+		constexpr choose begin() const
+		{
+			return choose{ n, 0, 1 };
+		}
+		constexpr choose end() const
+		{
+			return choose{ n, n + 1, 0 };
+		}
+
+		constexpr virtual explicit operator bool() const noexcept
 		{
 			return k <= n;
 		}

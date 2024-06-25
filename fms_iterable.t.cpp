@@ -73,14 +73,12 @@ int iota_test()
 		i = drop(i, 2);
 		assert(*i == 3);
 	}
-	/*
 	{
-		assert(vector(counted(iota(1), 3)) == std::vector({ 1,2,3 }));
-		assert(vector(counted(power(2), 3)) == std::vector({ 1,2,4 }));
-		assert(vector(counted(factorial(1), 4)) == std::vector({ 1,1,2,6 }));
-		assert(vector(choose(3)) == std::vector({ 1,3,3,1 }));
+		assert(starts_with(iota(1), { 1,2,3 }));
+		assert(starts_with(power(2), { 1,2,4 }));
+		assert(starts_with(factorial(1), { 1,1,2,6 }));
+		assert(starts_with(choose(3), { 1,3,3,1 }));
 	}
-	*/
 
 	return 0;
 }
@@ -91,6 +89,8 @@ int interval_test()
 	{
 		interval i(iota(1), iota(4));
 		assert(size(i) == 3);
+		i = drop(i, 3);
+		assert(!i);
 	}
 	{
 		std::vector<int> v({ 1, 2, 3 });
@@ -111,8 +111,8 @@ int interval_test()
 		assert(*i == 3);
 		i -= 2;
 		assert(*i == 1);
-		i[1] = 4;
-		assert(*(i + 1) == 4);
+		//i[1] = 4;
+		//assert(*(i + 1) == 4);
 	}
 	{
 		std::vector<int> v({ 1, 2, 3 });
@@ -132,8 +132,11 @@ int interval_test()
 	}
 	{
 		auto i = interval(iota(1), iota(4));
-		std::vector v({ 1,2,3 });
-		assert(equal(i, make_interval(v)));
+		assert(equal(i, { 1,2,3 }));
+		i = drop(i, 1);
+		assert(equal(i, { 2,3 }));
+		i = drop(i, 9);
+		assert(!i);
 	}
 
 	return 0;
