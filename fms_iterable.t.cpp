@@ -90,8 +90,6 @@ int interval_test()
 	//static_assert(has_end<interval<iota<int>>>);
 	{
 		interval i(iota(1), iota(4));
-		bool b;
-		b = !i;
 		assert(size(i) == 3);
 	}
 	{
@@ -421,28 +419,9 @@ int delta_test()
 	return 0;
 }
 #endif // 0
-struct A {
-	constexpr virtual explicit operator bool() const noexcept
-	{
-		//puts("A");
-		return true;
-	}
-};
 
-struct B : public A {
-	constexpr explicit operator bool() const noexcept
-	{
-		//puts("B");
-		return true;
-	}
-};
 int main()
 {
-	bool c;
-	A a;
-	c = !a;
-	B b;
-	c = !b;
 	//drop_test();
 	iota_test();
 	interval_test();
