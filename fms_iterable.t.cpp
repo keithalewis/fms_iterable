@@ -67,20 +67,6 @@ int iota_test()
 		assert(*i == 2);
 		assert(*i++ == 2);
 		assert(*i == 3);
-
-		--i;
-		assert(*i == 2);
-		assert(*i-- == 2);
-		assert(*i == 1);
-
-		i += 3;
-		assert(*i == 4);
-		i -= 2;
-		assert(*i == 2);
-		auto j = i + 5;
-		assert(*j == 7);
-		assert(j[-1] == 6);
-		assert(j - i == 5);
 	}
 	{
 		iota i(1);
@@ -101,7 +87,13 @@ int iota_test()
 
 int interval_test()
 {
-	static_assert(has_end<interval<iota<int>>>);
+	//static_assert(has_end<interval<iota<int>>>);
+	{
+		interval i(iota(1), iota(4));
+		bool b;
+		b = !i;
+		assert(size(i) == 3);
+	}
 	{
 		std::vector<int> v({ 1, 2, 3 });
 		auto i = interval(v.begin(), v.end());
@@ -429,14 +421,34 @@ int delta_test()
 	return 0;
 }
 #endif // 0
+struct A {
+	constexpr virtual explicit operator bool() const noexcept
+	{
+		//puts("A");
+		return true;
+	}
+};
+
+struct B : public A {
+	constexpr explicit operator bool() const noexcept
+	{
+		//puts("B");
+		return true;
+	}
+};
 int main()
 {
+	bool c;
+	A a;
+	c = !a;
+	B b;
+	c = !b;
 	//drop_test();
 	iota_test();
+	interval_test();
 	/*
 	pointer_test();
 	counted_test();
-	interval_test();
 	repeat_test();
 	constant_test();
 	concatenate_test();
