@@ -1,5 +1,6 @@
 // fms_iterable.t.cpp - test fms_iterable.h
 #include <cassert>
+#include <cmath>
 #include <list>
 #include <vector>
 #include "fms_iterable.h"
@@ -438,6 +439,29 @@ int exp_test()
 	return 0;
 }
 
+int tuple_test()
+{
+	{
+		auto t = tuple(iota(1), iota(2), iota(3));
+		auto t2{ t };
+		assert(t == t2);
+		t = t2;
+		assert(!(t2 != t));
+
+		{
+			auto [i, j, k] = *t;
+			assert(i == 1 && j == 2 && k == 3);
+		}
+		++t;
+		{
+			auto [i, j, k] = *t;
+			assert(i == 2 && j == 3 && k == 4);
+		}
+	}
+
+	return 0;
+}
+
 int main()
 {
 	drop_test();
@@ -455,6 +479,6 @@ int main()
 	fold_test();
 	delta_test();
 	exp_test();
-
+	tuple_test();
 	return 0;
 }

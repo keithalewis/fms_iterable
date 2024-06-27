@@ -6,6 +6,7 @@
 #include <functional>
 #include <iterator>
 #include <limits>
+#include <tuple>
 #include <utility>
 
 namespace fms::iterable {
@@ -1425,6 +1426,50 @@ namespace fms::iterable {
 		return delta(i, [](T a, T b) { return std::min<T>(b - a, 0); });
 	}
 
+	template<class... Is>
+	class tuple {
+		std::tuple<Is...> is;
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = std::tuple<typename Is::value_type...>;
+		using reference = value_type&;
+		using difference_type = std::ptrdiff_t;
+
+		constexpr tuple(Is... is)
+			: is(is...)
+		{ }
+		constexpr tuple(const tuple&) = default;
+		constexpr tuple& operator=(const tuple&) = default;
+		constexpr tuple(tuple&&) = default;
+		constexpr tuple& operator=(tuple&&) = default;
+		constexpr ~tuple() = default;
+
+		constexpr bool operator==(const tuple& t) const = default;
+
+		constexpr explicit operator bool() const
+		{
+			return std::apply([](auto... i) { return (i && ...); }, is);
+		}
+		constexpr value_type operator*() const
+		{
+			return std::apply([](auto... i) { return std::make_tuple(*i...); }, is);
+		}
+		constexpr tuple& operator++() noexcept
+		{
+			std::apply([](auto&... i) { (++i, ...); }, is);
+
+			return *this;
+		}
+		constexpr tuple operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
+
 } // namespace fms
 
 #define FMS_ITERABLE_OPERATOR(X) \
@@ -1438,9 +1483,9 @@ namespace fms::iterable {
     template <class I, class J,                              \
         class T = std::common_type_t<typename I::value_type, \
             typename J::value_type>>                         \
-    constexpr auto operator OP(const I& i, const J& j)          \
+    constexpr auto operator OP(const I& i, const J& j)       \
     {                                                        \
-        return fms::iterable::binop(OP_, i, j);                             \
+        return fms::iterable::binop(OP_, i, j);              \
     }    
 FMS_ITERABLE_OPERATOR(FMS_ITERABLE_OPERATOR_FUNCTION)
 #undef FMS_ITERABLE_OPERATOR_FUNCTION
