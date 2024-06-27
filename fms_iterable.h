@@ -186,10 +186,7 @@ namespace fms::iterable {
 	template <class I>
 	constexpr std::size_t size(I i, std::size_t n = 0) noexcept
 	{
-		if constexpr (has_size<I>) {
-			return i.size();
-		}
-		else if constexpr (has_end<I>) {
+		if constexpr (has_end<I>) {
 			return n + std::distance(i, i.end());
 		}
 		else {
@@ -402,7 +399,7 @@ namespace fms::iterable {
 
 		constexpr choose begin() const
 		{
-			return choose{ n, 0, 1 };
+			return choose(n);
 		}
 		constexpr choose end() const
 		{
@@ -436,7 +433,7 @@ namespace fms::iterable {
 			return tmp;
 		}
 	};
-#if 0
+
 	// Unsafe pointer iterable with std::span/view semantics.
 	template<class T>
 	class ptr {
@@ -452,11 +449,13 @@ namespace fms::iterable {
 		constexpr ptr(T* p = nullptr)
 			: p(p)
 		{ }
+		/*
 		constexpr ptr(const ptr&) = default;
 		constexpr ptr& operator=(const ptr&) = default;
 		constexpr ptr(ptr&&) = default;
 		constexpr ptr& operator=(ptr&&) = default;
-		constexpr ~ptr() = default;
+		*/
+		constexpr virtual ~ptr() = default;
 
 		constexpr auto operator<=>(const ptr& _p) const = default;
 
@@ -464,12 +463,9 @@ namespace fms::iterable {
 		{
 			return *this;
 		}
-		constexpr ptr end() const
-		{
-			return ptr(nullptr);
-		}
+		// no end()
 
-		constexpr explicit operator bool() const noexcept
+		constexpr virtual explicit operator bool() const noexcept
 		{
 			return p != nullptr;
 		}
@@ -525,6 +521,10 @@ namespace fms::iterable {
 		{
 			return ptr(p + d);
 		}
+		constexpr friend ptr<T> operator+(std::ptrdiff_t d, ptr<T> p) noexcept
+		{
+			return p + d;
+		}
 		constexpr ptr& operator-=(difference_type d) noexcept
 		{
 			p -= d;
@@ -549,16 +549,6 @@ namespace fms::iterable {
 			return p[i];
 		}
 	};
-	template<class T>
-	constexpr ptr<T> operator+(std::ptrdiff_t d, ptr<T> p) noexcept
-	{
-		return p + d;
-	}
-	template<class T>
-	constexpr ptr<T> operator-(std::ptrdiff_t d, ptr<T> p) noexcept
-	{
-		return p - d;
-	}
 
 	// Iterable with no elements.
 	template<class T>
@@ -569,8 +559,7 @@ namespace fms::iterable {
 
 	// Iterable over [i, i + n).
 	template<class I>
-	class counted {
-		I i;
+	class counted : public I {
 		std::size_t n;
 	public:
 		using iterator_category = typename I::iterator_category;
@@ -581,7 +570,7 @@ namespace fms::iterable {
 
 		constexpr counted() = default;
 		constexpr counted(I i, std::size_t n)
-			: i(i), n(n)
+			: I(i), n(n)
 		{ }
 		constexpr counted(const counted&) = default;
 		constexpr counted& operator=(const counted&) = default;
@@ -593,11 +582,11 @@ namespace fms::iterable {
 
 		constexpr counted begin() const
 		{
-			return *this;
+			return counted(I::begin(), n);
 		}
 		constexpr counted end() const
 		{
-			return counted(drop(i, n), 0);
+			return counted(drop(I::begin(), n), 0);
 		}
 
 		constexpr explicit operator bool() const noexcept
@@ -607,19 +596,19 @@ namespace fms::iterable {
 		// indirectly readable
 		constexpr value_type operator*() const noexcept
 		{
-			return *i;
+			return I::operator*();
 		}
 		// indirectly writable
 		constexpr reference operator*() noexcept
 			requires std::indirectly_writable<I, value_type>
 		{
-			return *i;
+			return I::operator*();
 		}
 		// weakly incrementable
 		constexpr counted& operator++() noexcept
 		{
 			if (operator bool()) {
-				++i;
+				I::operator++();
 				--n;
 			}
 
@@ -637,7 +626,7 @@ namespace fms::iterable {
 		constexpr counted& operator--() noexcept
 			requires std::bidirectional_iterator<I>
 		{
-			--i;
+			I::operator--();
 			++n;
 
 			return *this;
@@ -655,7 +644,7 @@ namespace fms::iterable {
 		constexpr counted& operator+=(difference_type d) noexcept
 			requires std::random_access_iterator<I>
 		{
-			i += d;
+			I::operator+=(d);
 			n -= d;
 
 			return *this;
@@ -663,12 +652,17 @@ namespace fms::iterable {
 		constexpr counted operator+(difference_type d) const noexcept
 			requires std::random_access_iterator<I>
 		{
-			return counted(i + d, n - d);
+			return counted(I::operator+(d), n - d);
+		}
+		constexpr friend counted<I> operator+(std::ptrdiff_t d, counted<I> c) noexcept
+			requires std::random_access_iterator<I>
+		{
+			return c += d;
 		}
 		constexpr counted& operator-=(difference_type d) noexcept
 			requires std::random_access_iterator<I>
 		{
-			i -= d;
+			I::operator-=(d);
 			n += d;
 
 			return *this;
@@ -676,36 +670,24 @@ namespace fms::iterable {
 		constexpr difference_type operator-(const counted& _i) const noexcept
 			requires std::random_access_iterator<I>
 		{
-			return i - _i.i;
+			return I::operator-(_i);
 		}
 		constexpr counted operator-(difference_type d) const noexcept
 			requires std::random_access_iterator<I>
 		{
-			return counted(i - d, n + d);
+			return counted(I::operator-(d), n + d);
 		}
-		reference operator[](difference_type d) const noexcept
+		constexpr reference operator[](difference_type d) const noexcept
 			requires std::random_access_iterator<I>
 		{
-			return i[d];
+			return I::operator[](d);
 		}
-		reference operator[](difference_type d) noexcept
+		constexpr reference operator[](difference_type d) noexcept
 			requires std::random_access_iterator<I>
 		{
-			return i[d];
+			return I::operator[](d);
 		}
 	};
-	template<class I>
-		requires std::random_access_iterator<I>
-	constexpr counted<I> operator+(std::ptrdiff_t d, counted<I> c) noexcept
-	{
-		return c += d;
-	}
-	template<class I>
-		requires std::random_access_iterator<I>
-	constexpr counted<I> operator-(std::ptrdiff_t d, counted<I> c) noexcept
-	{
-		return c -= d;
-	}
 
 	// Assumes lifetime of a.
 	template<class T, std::size_t N>
@@ -717,8 +699,9 @@ namespace fms::iterable {
 	template<class I>
 	constexpr auto take(I i, std::size_t n)
 	{
-		return interval(i, drop(i, n));
+		return counted(i, std::min(n, size(i)));
 	}
+#if 0
 
 	// Cycle over iterator values.
 	template<class I>

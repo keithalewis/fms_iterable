@@ -142,17 +142,15 @@ int interval_test()
 	return 0;
 }
 
-#if 0
-int pointer_test()
+int ptr_test()
 {
 	static_assert(std::random_access_iterator<ptr<int>>);
 	static_assert(!ptr<int>());
-	{
-	}
 	static_assert(size(empty<int>()) == 0);
 	{
 		int i[] = { 1, 2, 3 };
-		auto p = counted(ptr(i), 3);
+		auto p = interval(ptr(i), ptr(i + 3));
+		assert(size(p) == 3);
 		auto p2{ p };
 		assert(p == p2);
 		p = p2;
@@ -170,7 +168,7 @@ int pointer_test()
 		assert(!p);
 	}
 	{
-		constexpr int a[] = { 1, 2, 3 };
+		int a[] = { 1, 2, 3 };
 		auto p = array(a);
 		auto p2{ p };
 		assert(p == p2);
@@ -259,7 +257,7 @@ int pointer_test()
 
 int counted_test()
 {
-	static_assert(std::random_access_iterator<counted<ptr<int>>>);
+	//static_assert(std::random_access_iterator<counted<ptr<int>>>);
 	{
 		auto c = counted(iota(1), 3);
 		auto c2{ c };
@@ -278,6 +276,7 @@ int counted_test()
 
 	return 0;
 }
+#if 0
 
 int repeat_test()
 {
@@ -428,8 +427,8 @@ int main()
 	//drop_test();
 	iota_test();
 	interval_test();
+	ptr_test();
 	/*
-	pointer_test();
 	counted_test();
 	repeat_test();
 	constant_test();
