@@ -62,7 +62,7 @@ int iota_test()
 		assert(starts_with(iota(1), { 1,2,3 }));
 		assert(starts_with(power(2), { 1,2,4 }));
 		assert(starts_with(factorial(1), { 1,1,2,6 }));
-		assert(starts_with(choose(3), { 1,3,3,1 }));
+		assert(equal(choose(3), { 1,3,3,1 }));
 	}
 
 	return 0;
@@ -414,6 +414,30 @@ int delta_test()
 	return 0;
 }
 
+int exp_test() 
+{
+	const auto eps = [](double x) { return x + 1 == 1; };
+	double x = 1;
+	{
+		// e^x = sum x^n/n!
+		auto expx = sum(until(eps, power(x) / factorial()));
+		double exp1 = std::exp(1.);
+		assert(std::fabs(expx - exp1) <= 5e-16);
+	}
+	{
+		/*
+		auto expx = until(eps, power(x) / factorial());
+		auto tx = fms::time([&]() { sum(expx); }, 10'000);
+		auto t1 = fms::time([&]() { std::exp(1.); }, 10'000'000);
+		//t = fms::time([&]() { sum(expx, 0, std::execution::seq); });
+		auto q = 1000 * tx / t1;
+		assert(q != 0);
+		*/
+	}
+
+	return 0;
+}
+
 int main()
 {
 	drop_test();
@@ -430,6 +454,7 @@ int main()
 	until_test();
 	fold_test();
 	delta_test();
+	exp_test();
 
 	return 0;
 }

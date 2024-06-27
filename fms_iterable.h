@@ -3,6 +3,7 @@
 #include <compare>
 #include <concepts>
 #include <cstddef>
+#include <functional>
 #include <iterator>
 #include <limits>
 #include <utility>
@@ -450,12 +451,10 @@ namespace fms::iterable {
 		constexpr ptr(T* p = nullptr)
 			: p(p)
 		{ }
-		/*
 		constexpr ptr(const ptr&) = default;
 		constexpr ptr& operator=(const ptr&) = default;
 		constexpr ptr(ptr&&) = default;
 		constexpr ptr& operator=(ptr&&) = default;
-		*/
 		constexpr virtual ~ptr() = default;
 
 		constexpr auto operator<=>(const ptr& _p) const = default;
@@ -777,6 +776,11 @@ namespace fms::iterable {
 		constexpr constant(T t)
 			: t(t)
 		{ }
+		constexpr constant(const constant&) = default;
+		constexpr constant& operator=(const constant&) = default;
+		constexpr constant(constant&&) = default;
+		constexpr constant& operator=(constant&&) = default;
+		constexpr ~constant() = default;
 
 		constexpr auto operator<=>(const constant& c) const
 		{
@@ -1082,6 +1086,79 @@ namespace fms::iterable {
 		}
 	};
 
+	// Apply a binary operation to elements of two iterable.
+	template <class BinOp, class I0, class I1, class T0 = typename I0::value_type, class T1 = typename I1::value_type,
+		class T = std::invoke_result_t<BinOp, T0, T1>>
+		class binop {
+		BinOp op;
+		I0 i0;
+		I1 i1;
+		public:
+			using iterator_category = std::input_iterator_tag;
+			using value_type = T;
+			using reference = T&;
+			using difference_type = std::ptrdiff_t;
+
+			constexpr binop(BinOp op, I0 i0, I1 i1)
+				: op(op), i0(i0), i1(i1)
+			{ }
+			constexpr binop(const binop& o)
+				: op(o.op), i0(o.i0), i1(o.i1)
+			{ }
+			constexpr binop(binop&& o) noexcept
+				: op(o.op), i0(std::move(o.i0)), i1(std::move(o.i1))
+			{ }
+			constexpr binop& operator=(const binop& o)
+			{
+				if (this != &o) {
+					//op = o.op;
+					i0 = o.i0;
+					i1 = o.i1;
+				}
+
+				return *this;
+			}
+			constexpr binop& operator=(binop&& o)
+			{
+				if (this != &o) {
+					//op = o.op;
+					i0 = std::move(o.i0);
+					i1 = std::move(o.i1);
+				}
+			}
+			constexpr ~binop() = default;
+
+			constexpr bool operator==(const binop& o) const
+			{
+				return i0 == o.i0 && i1 == o.i1;
+			}
+
+			constexpr explicit operator bool() const
+			{
+				return i0 && i1;
+			}
+			constexpr value_type operator*() const
+			{
+				return op(*i0, *i1);
+			}
+			constexpr binop& operator++() noexcept
+			{
+				++i0;
+				++i1;
+
+				return *this;
+			}
+			constexpr binop operator++(int) noexcept
+			{
+				auto b{ *this };
+
+				operator++();
+
+				return b;
+			}
+	};
+
+
 	// Elements satisfying predicate.
 	template <class P, class I, class T = typename I::value_type>
 	class filter {
@@ -1112,8 +1189,8 @@ namespace fms::iterable {
 		{
 			next();
 		}
-		constexpr filter(filter&& a) = default;
 		constexpr filter& operator=(const filter& a) = default;
+		constexpr filter(filter&& a) = default;
 		constexpr filter& operator=(filter&& a) = default;
 		constexpr ~filter() = default;
 
@@ -1164,8 +1241,8 @@ namespace fms::iterable {
 			: p(p), i(i)
 		{ }
 		constexpr until(const until&) = default;
-		constexpr until(until&&) = default;
 		constexpr until& operator=(const until&) = default;
+		constexpr until(until&&) = default;
 		constexpr until& operator=(until&&) = default;
 		constexpr ~until() = default;
 
@@ -1217,6 +1294,7 @@ namespace fms::iterable {
 		{ }
 		constexpr fold(const fold& f) = default;
 		constexpr fold& operator=(const fold& f) = default;
+		constexpr fold(fold&& f) = default;
 		constexpr fold& operator=(fold&& f) noexcept = default;
 		constexpr ~fold() = default;
 
@@ -1348,3 +1426,28 @@ namespace fms::iterable {
 	}
 
 } // namespace fms
+
+#define FMS_ITERABLE_OPERATOR(X) \
+    X(+, std::plus<T>{})         \
+    X(-, std::minus<T>{})        \
+    X(*, std::multiplies<T>{})   \
+    X(/, std::divides<T>{})      \
+    X(%, std::modulus<T>{})
+
+#define FMS_ITERABLE_OPERATOR_FUNCTION(OP, OP_)              \
+    template <class I, class J,                              \
+        class T = std::common_type_t<typename I::value_type, \
+            typename J::value_type>>                         \
+    constexpr auto operator OP(const I& i, const J& j)          \
+    {                                                        \
+        return fms::iterable::binop(OP_, i, j);                             \
+    }    
+FMS_ITERABLE_OPERATOR(FMS_ITERABLE_OPERATOR_FUNCTION)
+#undef FMS_ITERABLE_OPERATOR_FUNCTION
+#undef FMS_ITERABLE_OPERATOR
+
+template<class I, class T = typename I::value_type>
+constexpr auto operator-(const I& i)
+{
+	return constant(T(-1)) * i;
+}
