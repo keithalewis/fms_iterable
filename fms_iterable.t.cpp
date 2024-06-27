@@ -1,39 +1,24 @@
 // fms_iterable.t.cpp - test fms_iterable.h
 #include <cassert>
-#include <limits>
 #include <list>
 #include <vector>
 #include "fms_iterable.h"
 
 using namespace fms::iterable;
 
-template<class I>
-inline std::vector<typename I::value_type> vector(I i)
-{
-	std::vector<typename I::value_type> v;
-
-	for (auto j : i) {
-		v.push_back(j);
-	}
-
-	return v;
-}
-
-/*
 int drop_test()
 {
 	{
 		int i[] = { 1, 2, 3 };
 		auto a = array(i);
 		assert(equal(drop(a, 0), a));
-		assert(equal(drop(a, 1), counted(iota(2), 2)));
+		assert(equal(drop(a, 1), take(iota(2), 2)));
 		assert(equal(drop(a, 3), empty<int>()));
-		assert(equal(drop(a, 4), empty<int>()));
+		//assert(equal(drop(a, 4), empty<int>()));
 	}
 
 	return 0;
 }
-*/
 
 int iota_test()
 {
@@ -299,7 +284,6 @@ int constant_test()
 
 	return 0;
 }
-#if 0
 
 int concatenate_test()
 {
@@ -317,17 +301,17 @@ int merge_test()
 {
 	{
 		const auto i = merge(counted(iota(1), 3), counted(iota(2), 3));
-		assert(vector(i) == std::vector({ 1,2,2,3,3,4 }));
+		assert(equal(i, { 1,2,2,3,3,4 }));
 		assert(equal(i, merge(i, empty<int>())));
 		assert(equal(merge(i, empty<int>()), i));
 	}
 	{
 		const auto i = merge(counted(iota(4), 3), counted(iota(1), 3));
-		assert(vector(i) == std::vector({ 1,2,3,4,5,6 }));
+		assert(equal(i, { 1,2,3,4,5,6 }));
 	}
 	{
 		const auto i = merge(counted(iota(3), 3), counted(iota(1), 3));
-		assert(vector(i) == std::vector({ 1,2,3,3,4,5 }));
+		assert(equal(i, { 1,2,3,3,4,5 }));
 	}
 
 	return 0;
@@ -346,7 +330,7 @@ int apply_test()
 		i = i2;
 		assert(!(i2 != i));
 
-		assert(vector(i) == std::vector({ 2,3,4 }));
+		assert(equal(i, { 2,3,4 }));
 	}
 	{
 		auto i = apply(is_even, counted(iota(1), 3));
@@ -355,7 +339,7 @@ int apply_test()
 		i = i2;
 		assert(!(i2 != i));
 
-		assert(vector(i) == std::vector<bool>({ false,true,false }));
+		assert(equal(i, { false,true,false }));
 	}
 
 	return 0;
@@ -414,24 +398,31 @@ int fold_test()
 int delta_test()
 {
 	{
-		auto d = delta(iota(0));
-		//assert(equal(counted(d, 3), counted(constant(1), 3)));
+		auto d = delta(take(iota(0), 3));
+		auto d2{ d };
+		assert(d == d2);
+		d = d2;
+		assert(!(d2 != d));
+
+		assert(equal(d, { 1, 1 }));
+	}
+	{
+		auto d = delta(apply([](int i) { return i * i; }, take(iota(1), 3)));
+		assert(equal(d, { 4 - 1, 9 - 4 }));
 	}
 
 	return 0;
 }
-#endif // 0
 
 int main()
 {
-	//drop_test();
+	drop_test();
 	iota_test();
 	interval_test();
 	ptr_test();
 	counted_test();
 	repeat_test();
 	constant_test();
-	/*
 	concatenate_test();
 	merge_test();
 	apply_test();
@@ -439,7 +430,6 @@ int main()
 	until_test();
 	fold_test();
 	delta_test();
-	*/
 
 	return 0;
 }

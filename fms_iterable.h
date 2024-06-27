@@ -4,6 +4,7 @@
 #include <concepts>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <utility>
 
 namespace fms::iterable {
@@ -822,9 +823,9 @@ namespace fms::iterable {
 		{
 			return *this;
 		}
-		constexpr friend constant operator+(difference_type, const constant&)
+		constexpr friend constant operator+(difference_type d, const constant& c)
 		{
-			return *this;
+			return c;
 		}
 		constexpr constant& operator-=(difference_type)
 		{
@@ -853,7 +854,7 @@ namespace fms::iterable {
 	{
 		return take(constant<T>(t), 1);
 	}
-#if 0
+
 	// i0 then i1
 	template <class I0, class I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
 	class concatenate2 {
@@ -1345,6 +1346,5 @@ namespace fms::iterable {
 	{
 		return delta(i, [](T a, T b) { return std::min<T>(b - a, 0); });
 	}
-#endif // 0
 
 } // namespace fms
