@@ -207,7 +207,7 @@ namespace fms::iterable {
 	constexpr I drop(I i, std::size_t n) noexcept
 	{
 		if constexpr (has_end<I>) {
-			return std::next(i, n);
+			return std::next(i, std::min(n, size(i)));
 		}
 		else {
 			while (n-- && i) {
@@ -697,9 +697,14 @@ namespace fms::iterable {
 		return counted(ptr(a), N);
 	}
 
+	// Take at most n elements from i.
 	template<class I>
 	constexpr auto take(I i, std::size_t n)
 	{
+		if constexpr (has_end<I>) {
+			n = std::min(n, size(i));
+		}
+
 		return counted(i, n);
 	}
 

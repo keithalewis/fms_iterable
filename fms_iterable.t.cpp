@@ -15,7 +15,12 @@ int drop_test()
 		assert(equal(drop(a, 0), a));
 		assert(equal(drop(a, 1), take(iota(2), 2)));
 		assert(equal(drop(a, 3), empty<int>()));
-		//assert(equal(drop(a, 4), empty<int>()));
+		assert(equal(drop(a, 4), empty<int>()));
+
+		assert(equal(take(a, 0), empty<int>()));
+		assert(equal(take(a,2), { 1, 2 }));
+		assert(equal(take(a, 3), a));
+		assert(equal(take(a, 4), a));
 	}
 
 	return 0;
@@ -448,11 +453,13 @@ int tuple_test()
 		t = t2;
 		assert(!(t2 != t));
 
+		assert(t);
 		{
 			auto [i, j, k] = *t;
 			assert(i == 1 && j == 2 && k == 3);
 		}
 		++t;
+		assert(t);
 		{
 			auto [i, j, k] = *t;
 			assert(i == 2 && j == 3 && k == 4);
@@ -480,5 +487,6 @@ int main()
 	delta_test();
 	exp_test();
 	tuple_test();
+
 	return 0;
 }
