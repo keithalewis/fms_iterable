@@ -204,7 +204,7 @@ namespace fms::iterable {
 	constexpr I drop(I i, std::size_t n) noexcept
 	{
 		if constexpr (has_end<I>) {
-			return std::next(i, std::min(n, size(i)));
+			return std::next(i, n);
 		}
 		else {
 			while (n-- && i) {
@@ -521,7 +521,7 @@ namespace fms::iterable {
 		{
 			return ptr(p + d);
 		}
-		constexpr friend ptr<T> operator+(std::ptrdiff_t d, ptr<T> p) noexcept
+		constexpr friend ptr<T> operator+(difference_type d, ptr<T> p) noexcept
 		{
 			return p + d;
 		}
@@ -699,9 +699,8 @@ namespace fms::iterable {
 	template<class I>
 	constexpr auto take(I i, std::size_t n)
 	{
-		return counted(i, std::min(n, size(i)));
+		return counted(i, n);
 	}
-#if 0
 
 	// Cycle over iterator values.
 	template<class I>
@@ -806,68 +805,55 @@ namespace fms::iterable {
 			return *this;
 		}
 		// bidirectional
-		constexpr constant& operator--()
+		constexpr constant& operator--() noexcept
 		{
 			return *this;
 		}
-		constexpr constant operator--(int)
+		constexpr constant operator--(int) noexcept
 		{
 			return *this;
 		}
 		// random access
-		constant& operator+=(difference_type)
+		constexpr constant& operator+=(difference_type)
 		{
 			return *this;
 		}
-		constant operator+(difference_type) const
+		constexpr constant operator+(difference_type) const
 		{
 			return *this;
 		}
-		constant& operator-=(difference_type)
+		constexpr friend constant operator+(difference_type, const constant&)
 		{
 			return *this;
 		}
-		constant operator-(difference_type) const
+		constexpr constant& operator-=(difference_type)
 		{
 			return *this;
 		}
-		difference_type operator-(const constant&) const
+		constexpr constant operator-(difference_type) const
+		{
+			return *this;
+		}
+		constexpr difference_type operator-(const constant&) const
 		{
 			return 0;
 		}
-		value_type operator[](difference_type) const
+		constexpr value_type operator[](difference_type) const
 		{
 			return t;
 		}
-		reference operator[](difference_type)
+		constexpr reference operator[](difference_type)
 		{
 			return t;
 		}
 	};
-	template<class I>
-	constexpr constant<I> operator+(std::ptrdiff_t n, const constant<I>& i)
-	{
-		return i;
-	}
-	template<class I>
-	constexpr constant<I> operator-(std::ptrdiff_t n, const constant<I>& i)
-	{
-		return i;
-	}
-	/*
-	template<class I>
-	constexpr ptrdiff_t operator-(const constant<I>&, const constant<I>&)
-	{
-		return 0;
-	}
-	*/
 
 	template<class T>
-	constexpr auto once(T t)
+	constexpr auto single(T t)
 	{
 		return take(constant<T>(t), 1);
 	}
-
+#if 0
 	// i0 then i1
 	template <class I0, class I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
 	class concatenate2 {

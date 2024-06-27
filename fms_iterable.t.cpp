@@ -135,7 +135,7 @@ int interval_test()
 		assert(equal(i, { 1,2,3 }));
 		i = drop(i, 1);
 		assert(equal(i, { 2,3 }));
-		i = drop(i, 9);
+		i = drop(i, 2);
 		assert(!i);
 	}
 
@@ -276,12 +276,11 @@ int counted_test()
 
 	return 0;
 }
-#if 0
 
 int repeat_test()
 {
 	{
-		assert(equal(counted(constant(1), 3), counted(repeat(once(1)), 3)));
+		assert(equal(counted(constant(1), 3), counted(repeat(single(1)), 3)));
 	}
 
 	return 0;
@@ -300,6 +299,7 @@ int constant_test()
 
 	return 0;
 }
+#if 0
 
 int concatenate_test()
 {
@@ -428,10 +428,10 @@ int main()
 	iota_test();
 	interval_test();
 	ptr_test();
-	/*
 	counted_test();
 	repeat_test();
 	constant_test();
+	/*
 	concatenate_test();
 	merge_test();
 	apply_test();
