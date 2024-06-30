@@ -1126,8 +1126,11 @@ namespace fms::iterable {
 	}
 
 	// Apply a function to elements of an iterable.
-	template <class F, class I, class T = typename I::value_type, class U = std::invoke_result_t<F, T>>
+	template <class F, class I>
 	class apply {
+		using T = std::iter_value_t<I>;
+		using U = std::invoke_result_t<F, T>;
+
 		std::optional<F> f; // for operator=(const apply&)
 		I i;
 	public:
@@ -1142,12 +1145,12 @@ namespace fms::iterable {
 			: f(std::move(f)), i(i)
 		{ }
 		constexpr apply(const apply& a)
+			: i(a.i)
 		{
 			if (a.f.has_value()) {
 				f.reset();
 				f.emplace(a.f.value());
 			}
-			i = a.i;
 		}
 		constexpr apply& operator=(const apply& a)
 		{
@@ -1194,10 +1197,13 @@ namespace fms::iterable {
 	};
 
 	// Apply a binary operation to elements of two iterable.
-	template <class BinOp, class I0, class I1, class T0 = typename I0::value_type, class T1 = typename I1::value_type,
-		class T = std::invoke_result_t<BinOp, T0, T1>>
-		class binop {
-		BinOp op;
+	template <class BinOp, class I0, class I1>
+	class binop {
+		using T0 = std::iter_value_t<I0>;
+		using T1 = std::iter_value_t<I1>;
+		using T = std::invoke_result_t<BinOp, T0, T1>;
+		
+		std::optional<BinOp> op;
 		I0 i0;
 		I1 i1;
 		public:
@@ -1207,32 +1213,31 @@ namespace fms::iterable {
 			using difference_type = std::ptrdiff_t;
 
 			constexpr binop(BinOp op, I0 i0, I1 i1)
-				: op(op), i0(i0), i1(i1)
+				: op(std::move(op)), i0(i0), i1(i1)
 			{ }
 			constexpr binop(const binop& o)
-				: op(o.op), i0(o.i0), i1(o.i1)
-			{ }
-			constexpr binop(binop&& o) noexcept
-				: op(o.op), i0(std::move(o.i0)), i1(std::move(o.i1))
-			{ }
+				: i0(o.i0), i1(o.i1)
+			{ 
+				if (o.op.has_value()) {
+					op.reset();
+					op.emplace(o.op.value());
+				}
+			}
 			constexpr binop& operator=(const binop& o)
 			{
 				if (this != &o) {
-					//op = o.op;
+					if (o.op.has_value()) {
+						op.reset();
+						op.emplace(o.op.value());
+					}
 					i0 = o.i0;
 					i1 = o.i1;
 				}
 
 				return *this;
 			}
-			constexpr binop& operator=(binop&& o)
-			{
-				if (this != &o) {
-					//op = o.op;
-					i0 = std::move(o.i0);
-					i1 = std::move(o.i1);
-				}
-			}
+			constexpr binop(binop&& o) noexcept = default;
+			constexpr binop& operator=(binop&& o) = default;
 			constexpr ~binop() = default;
 
 			constexpr bool operator==(const binop& o) const
@@ -1246,7 +1251,7 @@ namespace fms::iterable {
 			}
 			constexpr value_type operator*() const
 			{
-				return op(*i0, *i1);
+				return op.has_value() ? op.value()(*i0, *i1) : value_type{};
 			}
 			constexpr binop& operator++() noexcept
 			{
