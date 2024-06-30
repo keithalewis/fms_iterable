@@ -102,9 +102,9 @@ namespace fms::iterable {
 
 	// i equals {t,...}
 	template<class I, class T = std::iter_value_t<I>>
-	constexpr bool equal(I i, std::initializer_list<T> il)
+	constexpr bool equal(I i, std::initializer_list<T> ts)
 	{
-		for (const auto& t : il) {
+		for (const auto& t : ts) {
 			if (!i || *i++ != t) {
 				return false;
 			}
@@ -114,9 +114,9 @@ namespace fms::iterable {
 	}
 	// i starts with {t,...}
 	template<class I, class T = std::iter_value_t<I>>
-	constexpr bool starts_with(I i, std::initializer_list<T> il)
+	constexpr bool starts_with(I i, std::initializer_list<T> ts)
 	{
-		for (const auto& t : il) {
+		for (const auto& t : ts) {
 			if (!i || *i++ != t) {
 				return false;
 			}
@@ -768,6 +768,12 @@ namespace fms::iterable {
 		}
 	};
 
+	template<class I>
+	constexpr auto rotate(I i, std::size_t n)
+	{
+		return take(drop(repeat(i), n), size(i));
+	}
+
 	template<class T>
 	class constant {
 		T t;
@@ -1044,7 +1050,7 @@ namespace fms::iterable {
 	// Apply a function to elements of an iterable.
 	template <class F, class I, class T = typename I::value_type, class U = std::invoke_result_t<F, T>>
 	class apply {
-		F f;
+		std::reference_wrapper<const F> f;
 		I i;
 	public:
 		using iterator_category = std::input_iterator_tag;
@@ -1055,7 +1061,7 @@ namespace fms::iterable {
 
 		constexpr apply() = default;
 		constexpr apply(F f, const I& i)
-			: f(f), i(i)
+			: f(std::cref(f)), i(i)
 		{ }
 		constexpr apply(const apply& a) = default;
 		constexpr apply(apply&& a) = default;

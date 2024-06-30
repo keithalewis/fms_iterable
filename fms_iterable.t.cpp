@@ -347,6 +347,23 @@ int apply_test()
 
 		assert(equal(i, { false,true,false }));
 	}
+	{
+		auto i = apply(is_even, counted(iota(1), 3));
+		auto ii = concatenate(i, i);
+		auto ii2{ ii };
+		ii = ii2;
+
+		assert(equal(ii, { false,true,false,false,true,false }));
+	}
+	{
+		int x = 2;
+		auto i = apply([x](auto j) { return x * j; }, counted(iota(1), 3));
+		auto ii = concatenate(i, i);
+		auto ii2{ ii };
+		ii = ii2;
+
+		assert(equal(ii, { 2,4,6,2,4,6 }));
+	}
 
 	return 0;
 }
