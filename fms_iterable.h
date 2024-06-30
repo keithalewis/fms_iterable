@@ -6,6 +6,7 @@
 #include <functional>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <tuple>
 #include <utility>
 
@@ -72,19 +73,20 @@ namespace fms::iterable {
 		{ i.end() } -> std::same_as<I>;
 	};
 	template <class I>
-	concept has_back = requires(I i) {
-		{ i.back() } -> std::same_as<I>;
+	concept has_last = requires(I i) {
+		{ i.last() } -> std::same_as<I>;
 	};
 	template <class I>
 	concept has_size = requires(I i) {
 		{ i.size() } -> std::same_as<std::size_t>;
 	};
 
-	// Lexicographically compare elements of two iterables
+	// Lexicographically compare at most n elements of two iterables
 	template<class I, class J>
-	constexpr auto compare(I i, J j, std::size_t n = std::numeric_limits<std::size_t>::max())
+	constexpr auto compare(I i, J j)
+		requires has_end<I> && has_end<J>
 	{
-		while (n-- && i && j) {
+		while (i && j) {
 			const auto cmp = *i++ <=> *j++;
 			if (cmp != 0) {
 				return cmp;
@@ -95,9 +97,10 @@ namespace fms::iterable {
 	}
 	// All elements are equal.
 	template<class I, class J>
-	constexpr auto equal(I i, J j, std::size_t n = std::numeric_limits<std::size_t>::max())
+		requires has_end<I>&& has_end<J>
+	constexpr auto equal(I i, J j)
 	{
-		return compare(i, j, n) == 0;
+		return compare(i, j) == 0;
 	}
 
 	// i equals {t,...}
@@ -144,12 +147,12 @@ namespace fms::iterable {
 		return j;
 	}
 
-	// Last element of iterable.
+	// Last element of iterable. ++last(i) == end(i)
 	template <class I>
-	constexpr I back(I i)
+	constexpr I last(I i)
 	{
-		if constexpr (has_back<I>) {
-			return i.back();
+		if constexpr (has_last<I>) {
+			return i.last();
 		}
 		else if constexpr (has_end<I> && std::bidirectional_iterator<I>) {
 			return --i.end();
@@ -170,7 +173,7 @@ namespace fms::iterable {
 	{
 		return i;
 	}
-	// ++back(i)
+	// ++last(i)
 	template <class I>
 	constexpr I end(I i)
 	{
@@ -187,7 +190,7 @@ namespace fms::iterable {
 
 	// size(i, size(j)) = size(i) + size(j)
 	template <class I>
-	constexpr std::size_t size(I i, std::size_t n = 0) noexcept
+	constexpr std::iter_difference_t<I> size(I i, std::iter_difference_t<I> n = 0) noexcept
 	{
 		if constexpr (has_end<I>) {
 			return n + std::distance(i, i.end());
@@ -204,14 +207,21 @@ namespace fms::iterable {
 
 	// Drop at most n from the beginning.
 	template <class I>
-	constexpr I drop(I i, std::size_t n) noexcept
+	constexpr I next(I i, std::iter_difference_t<I> n) noexcept
 	{
 		if constexpr (has_end<I>) {
 			return std::next(i, std::min(n, size(i)));
 		}
 		else {
-			while (n-- && i) {
-				++i;
+			if (n > 0) {
+				while (n-- && i) {
+					++i;
+				}
+			}
+			else if (n < 0) {
+				while (n++ && i) {
+					--i;
+				}
 			}
 
 			return i;
@@ -274,6 +284,12 @@ namespace fms::iterable {
 
 		constexpr auto operator<=>(const iota&) const = default;
 
+		constexpr auto begin() const
+		{
+			return *this;
+		}
+		// no end()
+
 		constexpr virtual explicit operator bool() const noexcept
 		{
 			return true;
@@ -296,6 +312,22 @@ namespace fms::iterable {
 
 			return tmp;
 		}
+		// bidirectional
+		constexpr iota& operator--() noexcept
+		{
+			--t;
+
+			return *this;
+		}
+		constexpr iota operator--(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
+		// random access???
 	};
 
 	// tn, tn*t, tn*t*t, ...
@@ -315,6 +347,12 @@ namespace fms::iterable {
 		constexpr virtual ~power() = default;
 
 		constexpr bool operator==(const power& p) const = default;
+
+		constexpr auto begin() const
+		{ 
+			return *this; 
+		}
+		// no end()
 
 		constexpr virtual explicit operator bool() const noexcept
 		{
@@ -338,6 +376,22 @@ namespace fms::iterable {
 
 			return tmp;
 		}
+		// bidirectional
+		constexpr power& operator--() noexcept
+		{
+			tn /= t;
+
+			return *this;
+		}
+		constexpr power operator--(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
+		// random access???
 	};
 
 	// 1, 1, 1*2, 1*2*3, ...
@@ -357,6 +411,12 @@ namespace fms::iterable {
 		constexpr virtual ~factorial() = default;
 
 		constexpr bool operator==(const factorial& f) const = default;
+
+		constexpr auto begin() const
+		{
+			return *this;
+		}
+		// no end()
 
 		constexpr virtual explicit operator bool() const noexcept
 		{
@@ -551,13 +611,6 @@ namespace fms::iterable {
 		}
 	};
 
-	// Iterable with no elements.
-	template<class T>
-	constexpr auto empty()
-	{
-		return ptr<T>();
-	}
-
 	// Iterable over [i, i + n).
 	template<class I>
 	class counted : public I {
@@ -587,7 +640,7 @@ namespace fms::iterable {
 		}
 		constexpr counted end() const
 		{
-			return counted(drop(I::begin(), n), 0);
+			return counted(next(I::begin(), n), 0);
 		}
 
 		constexpr explicit operator bool() const noexcept
@@ -699,7 +752,7 @@ namespace fms::iterable {
 
 	// Take at most n elements from i.
 	template<class I>
-	constexpr auto take(I i, std::size_t n)
+	constexpr auto take(I i, std::iter_difference_t<I> n)
 	{
 		if constexpr (has_end<I>) {
 			n = std::min(n, size(i));
@@ -707,6 +760,13 @@ namespace fms::iterable {
 
 		return counted(i, n);
 	}
+	// Iterable with no elements.
+	template<class T>
+	constexpr auto empty()
+	{
+		return take(ptr<T>(), 0);
+	}
+
 
 	// Cycle over iterator values.
 	template<class I>
@@ -769,9 +829,9 @@ namespace fms::iterable {
 	};
 
 	template<class I>
-	constexpr auto rotate(I i, std::size_t n)
+	constexpr auto rotate(I i, std::iter_difference_t<I> n)
 	{
-		return take(drop(repeat(i), n), size(i));
+		return take(next(repeat(i), n), size(i));
 	}
 
 	template<class T>
@@ -895,6 +955,15 @@ namespace fms::iterable {
 
 		constexpr bool operator==(const concatenate2& i) const = default;
 
+		constexpr auto begin() const
+		{
+			return *this;
+		}
+		constexpr auto end() const
+		{
+			return concatenate2(i0.end(), i1.end());
+		}
+
 		constexpr explicit operator bool() const
 		{
 			return i0 || i1;
@@ -974,6 +1043,15 @@ namespace fms::iterable {
 
 		constexpr bool operator==(const merge2& i) const = default;
 
+		constexpr auto begin() const
+		{
+			return *this;
+		}
+		constexpr auto end() const
+		{
+			return merge2(i0.end(), i1.end());
+		}
+
 		constexpr explicit operator bool() const
 		{
 			return i0 || i1;
@@ -1050,7 +1128,7 @@ namespace fms::iterable {
 	// Apply a function to elements of an iterable.
 	template <class F, class I, class T = typename I::value_type, class U = std::invoke_result_t<F, T>>
 	class apply {
-		std::reference_wrapper<const F> f;
+		std::optional<F> f; // for operator=(const apply&)
 		I i;
 	public:
 		using iterator_category = std::input_iterator_tag;
@@ -1061,11 +1139,28 @@ namespace fms::iterable {
 
 		constexpr apply() = default;
 		constexpr apply(F f, const I& i)
-			: f(std::cref(f)), i(i)
+			: f(std::move(f)), i(i)
 		{ }
-		constexpr apply(const apply& a) = default;
+		constexpr apply(const apply& a)
+		{
+			if (a.f.has_value()) {
+				f.reset();
+				f.emplace(a.f.value());
+			}
+			i = a.i;
+		}
+		constexpr apply& operator=(const apply& a)
+		{
+			if (this != &a) {
+				if (a.f.has_value()) {
+					f.reset();
+					f.emplace(a.f.value());
+				}
+				i = a.i;
+			}
+			return *this;
+		}
 		constexpr apply(apply&& a) = default;
-		constexpr apply& operator=(const apply& a) = default;
 		constexpr apply& operator=(apply&& a) = default;
 		constexpr ~apply() = default;
 
@@ -1080,7 +1175,7 @@ namespace fms::iterable {
 		}
 		constexpr value_type operator*() const
 		{
-			return f(*i);
+			return f.has_value() ? f.value()(*i) : value_type{};
 		}
 		constexpr apply& operator++() noexcept
 		{
@@ -1481,28 +1576,30 @@ namespace fms::iterable {
 		}
 	};
 
-} // namespace fms
+} // namespace fms::iterable
 
 #define FMS_ITERABLE_OPERATOR(X) \
-    X(+, std::plus<T>{})         \
-    X(-, std::minus<T>{})        \
-    X(*, std::multiplies<T>{})   \
-    X(/, std::divides<T>{})      \
-    X(%, std::modulus<T>{})
+    X(+, plus)         \
+    X(-, minus)        \
+    X(*, multiplies)   \
+    X(/, divides)      \
+    X(%, modulus)
 
-#define FMS_ITERABLE_OPERATOR_FUNCTION(OP, OP_)              \
-    template <class I, class J,                              \
-        class T = std::common_type_t<typename I::value_type, \
-            typename J::value_type>>                         \
-    constexpr auto operator OP(const I& i, const J& j)       \
-    {                                                        \
-        return fms::iterable::binop(OP_, i, j);              \
-    }    
+#define FMS_ITERABLE_OPERATOR_FUNCTION(OP, OP_) \
+    template <class I, class J, class T = std::common_type_t<std::iter_value_t<I>, std::iter_value_t<J>>> \
+	constexpr auto operator OP(const I& i, const J& j) {  return fms::iterable::binop(std::OP_<T>{}, i, j); } \
+
 FMS_ITERABLE_OPERATOR(FMS_ITERABLE_OPERATOR_FUNCTION)
 #undef FMS_ITERABLE_OPERATOR_FUNCTION
 #undef FMS_ITERABLE_OPERATOR
 
-template<class I, class T = typename I::value_type>
+//template <class I, class T = std::iter_value_t<I>> 
+//constexpr auto operator+(const I& i, T t)
+//{
+//	return fms::iterable::binop(std::plus<T>{}, i, fms::iterable::constant(t));
+//}
+
+template<class I, class T = std::iter_value_t<I>>
 constexpr auto operator-(const I& i)
 {
 	return constant(T(-1)) * i;

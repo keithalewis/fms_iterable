@@ -12,10 +12,10 @@ int drop_test()
 	{
 		int i[] = { 1, 2, 3 };
 		auto a = array(i);
-		assert(equal(drop(a, 0), a));
-		assert(equal(drop(a, 1), take(iota(2), 2)));
-		assert(equal(drop(a, 3), empty<int>()));
-		assert(equal(drop(a, 4), empty<int>()));
+		assert(equal(next(a, 0), a));
+		assert(equal(next(a, 1), take(iota(2), 2)));
+		assert(equal(next(a, 3), empty<int>()));
+		assert(equal(next(a, 4), empty<int>()));
 
 		assert(equal(take(a, 0), empty<int>()));
 		assert(equal(take(a,2), { 1, 2 }));
@@ -61,7 +61,7 @@ int iota_test()
 	}
 	{
 		iota i(1);
-		i = drop(i, 2);
+		i = next(i, 2);
 		assert(*i == 3);
 	}
 	{
@@ -80,7 +80,7 @@ int interval_test()
 	{
 		interval i(iota(1), iota(4));
 		assert(size(i) == 3);
-		i = drop(i, 3);
+		i = next(i, 3);
 		assert(!i);
 	}
 	{
@@ -115,7 +115,7 @@ int interval_test()
 		i[1] = 4;
 		copy(i, j);
 		assert(*++j == 4);
-		assert(*back(j) == 3);
+		assert(*last(j) == 3);
 
 		std::vector<int> w;
 		copy(i, back_insert_iterable(w));
@@ -124,9 +124,9 @@ int interval_test()
 	{
 		auto i = interval(iota(1), iota(4));
 		assert(equal(i, { 1,2,3 }));
-		i = drop(i, 1);
+		i = next(i, 1);
 		assert(equal(i, { 2,3 }));
-		i = drop(i, 2);
+		i = next(i, 2);
 		assert(!i);
 	}
 
@@ -236,8 +236,8 @@ int ptr_test()
 		int i[] = { 1, 2, 3 };
 		auto a = array(i);
 		assert(size(a) == 3);
-		//auto b = back(a);
-		assert(*back(a) == 3);
+		//auto b = last(a);
+		assert(*last(a) == 3);
 		assert(*--end(a) == 3);
 		a[1] = 4;
 		assert(*(a + 1) == 4);

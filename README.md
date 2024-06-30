@@ -26,8 +26,6 @@ iterables and an infinite arithmetic sequences called `iota(t = 0)` to generate
 `t, t + 1, t + 2, ...`.
 Overloads for arithmetic operators are provided so, for example, 
 `a + b * iota(0)` results in `a + b*n`, `n = 0, 1, 2, ...` during traversal.
-This permits certain peephole optimizations such as `operator+(0, i)`
-returning `i`, or `operator*(i, 0)` returning the constant `0` iterator.
 
 Writing an iterator class is simple: provide `explicit operator bool() const`,
 `operator*() const` to return the current value, and `operator++()` to
