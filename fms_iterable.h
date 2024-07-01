@@ -218,11 +218,6 @@ namespace fms::iterable {
 					++i;
 				}
 			}
-			else if (n < 0) {
-				while (n++ && i) {
-					--i;
-				}
-			}
 
 			return i;
 		}
