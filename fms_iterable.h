@@ -207,7 +207,7 @@ namespace fms::iterable {
 
 	// Drop at most n from the beginning.
 	template <class I>
-	constexpr I next(I i, std::iter_difference_t<I> n) noexcept
+	constexpr I drop(I i, std::iter_difference_t<I> n) noexcept
 	{
 		if constexpr (has_end<I>) {
 			return std::next(i, std::min(n, size(i)));
@@ -640,7 +640,7 @@ namespace fms::iterable {
 		}
 		constexpr counted end() const
 		{
-			return counted(next(I::begin(), n), 0);
+			return counted(drop(I::begin(), n), 0);
 		}
 
 		constexpr explicit operator bool() const noexcept
@@ -831,7 +831,7 @@ namespace fms::iterable {
 	template<class I>
 	constexpr auto rotate(I i, std::iter_difference_t<I> n)
 	{
-		return take(next(repeat(i), n), size(i));
+		return take(drop(repeat(i), n), size(i));
 	}
 
 	template<class T>
