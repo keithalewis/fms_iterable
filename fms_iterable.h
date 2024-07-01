@@ -1125,13 +1125,51 @@ namespace fms::iterable {
 		return merge2(i, merge(is...));
 	}
 
+	// copy assignable function object
+	template<class F>
+	class copy_assignable {
+		std::optional<F> f;
+	public:
+		constexpr copy_assignable() noexcept = default;
+		constexpr copy_assignable(F f) noexcept
+			: f(std::move(f))
+		{ }
+		copy_assignable(const copy_assignable& a)
+		{
+			f.reset();
+			if (a.f.has_value()) {
+				f.emplace(a.f.value());
+			}
+		}
+		copy_assignable& operator=(const copy_assignable& a)
+		{
+			if (this != &a) {
+				f.reset();
+				if (a.f.has_value()) {
+					f.emplace(a.f.value());
+				}
+			}
+
+			return *this;
+		}
+		copy_assignable(copy_assignable&&) = default;
+		copy_assignable& operator=(copy_assignable&&) = default;
+		~copy_assignable() = default;
+
+		template<class... Args>
+		constexpr auto operator()(Args&&... args) const
+		{
+			return f.has_value() ? f.value()(std::forward<Args>(args)...) : decltype(f.value()(std::forward<Args>(args)...)){};
+		}
+	};
+
 	// Apply a function to elements of an iterable.
 	template <class F, class I>
 	class apply {
 		using T = std::iter_value_t<I>;
 		using U = std::invoke_result_t<F, T>;
 
-		std::optional<F> f; // for operator=(const apply&)
+		copy_assignable<F> f; // for operator=(const apply&)
 		I i;
 	public:
 		using iterator_category = std::input_iterator_tag;
@@ -1144,25 +1182,8 @@ namespace fms::iterable {
 		constexpr apply(F f, const I& i)
 			: f(std::move(f)), i(i)
 		{ }
-		constexpr apply(const apply& a)
-			: i(a.i)
-		{
-			if (a.f.has_value()) {
-				f.reset();
-				f.emplace(a.f.value());
-			}
-		}
-		constexpr apply& operator=(const apply& a)
-		{
-			if (this != &a) {
-				if (a.f.has_value()) {
-					f.reset();
-					f.emplace(a.f.value());
-				}
-				i = a.i;
-			}
-			return *this;
-		}
+		constexpr apply(const apply& a) = default;
+		constexpr apply& operator=(const apply& a) = default;
 		constexpr apply(apply&& a) = default;
 		constexpr apply& operator=(apply&& a) = default;
 		constexpr ~apply() = default;
@@ -1178,7 +1199,7 @@ namespace fms::iterable {
 		}
 		constexpr value_type operator*() const
 		{
-			return f.has_value() ? f.value()(*i) : value_type{};
+			return f(*i);
 		}
 		constexpr apply& operator++() noexcept
 		{
@@ -1203,7 +1224,7 @@ namespace fms::iterable {
 		using T1 = std::iter_value_t<I1>;
 		using T = std::invoke_result_t<BinOp, T0, T1>;
 		
-		std::optional<BinOp> op;
+		copy_assignable<BinOp> op;
 		I0 i0;
 		I1 i1;
 		public:
@@ -1215,27 +1236,8 @@ namespace fms::iterable {
 			constexpr binop(BinOp op, I0 i0, I1 i1)
 				: op(std::move(op)), i0(i0), i1(i1)
 			{ }
-			constexpr binop(const binop& o)
-				: i0(o.i0), i1(o.i1)
-			{ 
-				if (o.op.has_value()) {
-					op.reset();
-					op.emplace(o.op.value());
-				}
-			}
-			constexpr binop& operator=(const binop& o)
-			{
-				if (this != &o) {
-					if (o.op.has_value()) {
-						op.reset();
-						op.emplace(o.op.value());
-					}
-					i0 = o.i0;
-					i1 = o.i1;
-				}
-
-				return *this;
-			}
+			constexpr binop(const binop& o) = default;
+			constexpr binop& operator=(const binop& o) = default;
 			constexpr binop(binop&& o) noexcept = default;
 			constexpr binop& operator=(binop&& o) = default;
 			constexpr ~binop() = default;
@@ -1251,7 +1253,7 @@ namespace fms::iterable {
 			}
 			constexpr value_type operator*() const
 			{
-				return op.has_value() ? op.value()(*i0, *i1) : value_type{};
+				return op(*i0, *i1);
 			}
 			constexpr binop& operator++() noexcept
 			{
@@ -1272,9 +1274,11 @@ namespace fms::iterable {
 
 
 	// Elements satisfying predicate.
-	template <class P, class I, class T = typename I::value_type>
+	template <class P, class I>
 	class filter {
-		P p;
+		using T = std::iter_value_t<I>;
+
+		copy_assignable<P> p;
 		I i;
 
 		constexpr void next()
@@ -1292,15 +1296,11 @@ namespace fms::iterable {
 
 		constexpr filter() = default;
 		constexpr filter(P p, const I& i)
-			: p(p), i(i)
+			: p(std::move(p)), i(i)
 		{
 			next();
 		}
-		constexpr filter(const filter& a)
-			: p(a.p), i(a.i)
-		{
-			next();
-		}
+		constexpr filter(const filter& a) = default;
 		constexpr filter& operator=(const filter& a) = default;
 		constexpr filter(filter&& a) = default;
 		constexpr filter& operator=(filter&& a) = default;
@@ -1339,7 +1339,7 @@ namespace fms::iterable {
 	// Stop at first element satisfying predicate.
 	template <class P, class I, class T = typename I::value_type>
 	class until {
-		P p;
+		copy_assignable<P> p;
 		I i;
 	public:
 		using iterator_category = std::input_iterator_tag;
@@ -1350,7 +1350,7 @@ namespace fms::iterable {
 
 		constexpr until() = default;
 		constexpr until(P p, const I& i)
-			: p(p), i(i)
+			: p(std::move(p)), i(i)
 		{ }
 		constexpr until(const until&) = default;
 		constexpr until& operator=(const until&) = default;
@@ -1390,7 +1390,7 @@ namespace fms::iterable {
 	// Right fold: of op
 	template <class BinOp, class I, class T = typename I::value_type>
 	class fold {
-		BinOp op;
+		copy_assignable<BinOp> op;
 		I i;
 		T t;
 	public:
@@ -1402,7 +1402,7 @@ namespace fms::iterable {
 
 		constexpr fold() = default;
 		constexpr fold(BinOp op, const I& i, T t = 0)
-			: op(op), i(i), t(t)
+			: op(std::move(op)), i(i), t(t)
 		{ }
 		constexpr fold(const fold& f) = default;
 		constexpr fold& operator=(const fold& f) = default;
@@ -1468,7 +1468,7 @@ namespace fms::iterable {
 	template <class I, class T = typename I::value_type, class D = std::minus<T>, 
 		typename U = std::invoke_result_t<D, T, T>>
 	class delta {
-		D d;
+		copy_assignable<D> d;
 		I i;
 		T t;
 	public:
@@ -1480,7 +1480,7 @@ namespace fms::iterable {
 
 		constexpr delta() = default;
 		constexpr delta(const I& _i, D _d = std::minus<T>{})
-			: d(_d), i(_i), t{}
+			: d(std::move(_d)), i(_i), t{}
 		{
 			if (i) {
 				t = *i;
