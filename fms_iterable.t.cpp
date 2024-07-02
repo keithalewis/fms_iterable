@@ -1,6 +1,7 @@
 // fms_iterable.t.cpp - test fms_iterable.h
 #include <cassert>
 #include <cmath>
+#include <chrono>
 #include <list>
 #include <vector>
 #include "fms_iterable.h"
@@ -486,6 +487,40 @@ int tuple_test()
 	return 0;
 }
 
+int sequence_test()
+{
+	using namespace std::chrono;
+	using std::literals::chrono_literals::operator""y;
+	{
+		sequence s(2024y / 1 / 1, months(1));
+		auto s2{ s };
+		assert(s == s2);
+		s = s2;
+		assert(!(s2 != s));
+
+		assert(s);
+		assert(*s == 2024y / 1 / 1);
+		++s;
+		assert(s);
+		assert(*s == 2024y / 2 / 1);
+	}
+	{
+		sequence s(sys_days(2024y / 1 / 1), days(1));
+		auto s2{ s };
+		assert(s == s2);
+		s = s2;
+		assert(!(s2 != s));
+
+		assert(s);
+		assert(*s == 2024y / 1 / 1);
+		++s;
+		assert(s);
+		assert(*s == 2024y / 1 / 2);
+	}
+
+	return 0;
+}
+
 int main()
 {
 	drop_test();
@@ -504,6 +539,7 @@ int main()
 	delta_test();
 	exp_test();
 	tuple_test();
+	sequence_test();
 
 	return 0;
 }

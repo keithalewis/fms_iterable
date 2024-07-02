@@ -325,6 +325,48 @@ namespace fms::iterable {
 		// random access???
 	};
 
+	// t, t + d, t + d + d, ...
+	template<class T, class D>
+	class sequence {
+		T t;
+		D d;
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = T;
+		using reference = T&;
+		using pointer = T*;
+		using difference_type = std::ptrdiff_t;
+
+		constexpr sequence(T t, D d)
+			: t(t), d(d)
+		{ }
+
+		constexpr bool operator==(const sequence&) const = default;
+
+		constexpr virtual explicit operator bool() const noexcept
+		{
+			return true;
+		}
+		constexpr value_type operator*() const noexcept
+		{
+			return t;
+		}
+		constexpr sequence& operator++() noexcept
+		{
+			t += d;
+
+			return *this;
+		}
+		constexpr sequence operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+	};
+
 	// tn, tn*t, tn*t*t, ...
 	template <class T>
 	class power {
