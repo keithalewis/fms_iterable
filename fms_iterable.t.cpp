@@ -300,6 +300,13 @@ int concatenate_test()
 		assert(equal(i, concatenate(i, empty<int>())));
 		assert(equal(concatenate(i, empty<int>()), i));
 	}
+	{
+		auto i = take(iota(1), 3);
+		auto j = iota(4);
+		auto ij = concatenate(i, j);
+		assert(starts_with(ij, { 1,2,3,4,5,6,7 }));
+		// size_t n = size(ij); // infinite
+	}
 
 	return 0;
 }
@@ -386,6 +393,14 @@ int filter_test()
 		assert(*f == 6);
 		assert(!++f);
 	}
+	{
+		auto f = filter(is_even, counted(iota(1), 6));
+		while (f) {
+			++f;
+		}
+		assert(f == f.end());
+	}
+
 
 	return 0;
 }

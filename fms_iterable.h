@@ -192,7 +192,10 @@ namespace fms::iterable {
 	template <class I>
 	constexpr std::iter_difference_t<I> size(I i, std::iter_difference_t<I> n = 0) noexcept
 	{
-		if constexpr (has_end<I>) {
+		if constexpr (has_size<I>) {
+			return i.size();
+		}
+		else if constexpr (has_end<I>) {
 			return n + std::distance(i, i.end());
 		}
 		else {
@@ -342,6 +345,12 @@ namespace fms::iterable {
 		{ }
 
 		constexpr bool operator==(const sequence&) const = default;
+
+		sequence begin() const
+		{
+			return *this;
+		}
+		// no end()
 
 		constexpr virtual explicit operator bool() const noexcept
 		{
@@ -650,7 +659,8 @@ namespace fms::iterable {
 
 	// Iterable over [i, i + n).
 	template<class I>
-	class counted : public I {
+	class counted {
+		I i;
 		std::size_t n;
 	public:
 		using iterator_category = typename I::iterator_category;
@@ -661,7 +671,7 @@ namespace fms::iterable {
 
 		constexpr counted() = default;
 		constexpr counted(I i, std::size_t n)
-			: I(i), n(n)
+			: i(i), n(n)
 		{ }
 		constexpr counted(const counted&) = default;
 		constexpr counted& operator=(const counted&) = default;
@@ -673,11 +683,15 @@ namespace fms::iterable {
 
 		constexpr counted begin() const
 		{
-			return counted(I::begin(), n);
+			return counted(i, n);
 		}
 		constexpr counted end() const
 		{
-			return counted(drop(I::begin(), n), 0);
+			return counted(drop(i, n), 0);
+		}
+		constexpr std::size_t size() const noexcept
+		{
+			return n;
 		}
 
 		constexpr explicit operator bool() const noexcept
@@ -687,19 +701,19 @@ namespace fms::iterable {
 		// indirectly readable
 		constexpr value_type operator*() const noexcept
 		{
-			return I::operator*();
+			return *i;
 		}
 		// indirectly writable
 		constexpr reference operator*() noexcept
 			requires std::indirectly_writable<I, value_type>
 		{
-			return I::operator*();
+			return *i;
 		}
 		// weakly incrementable
 		constexpr counted& operator++() noexcept
 		{
 			if (operator bool()) {
-				I::operator++();
+				++i;
 				--n;
 			}
 
@@ -717,7 +731,7 @@ namespace fms::iterable {
 		constexpr counted& operator--() noexcept
 			requires std::bidirectional_iterator<I>
 		{
-			I::operator--();
+			--i;
 			++n;
 
 			return *this;
@@ -735,7 +749,7 @@ namespace fms::iterable {
 		constexpr counted& operator+=(difference_type d) noexcept
 			requires std::random_access_iterator<I>
 		{
-			I::operator+=(d);
+			i += d;
 			n -= d;
 
 			return *this;
@@ -743,7 +757,7 @@ namespace fms::iterable {
 		constexpr counted operator+(difference_type d) const noexcept
 			requires std::random_access_iterator<I>
 		{
-			return counted(I::operator+(d), n - d);
+			return counted(i + d, n - d);
 		}
 		constexpr friend counted<I> operator+(std::ptrdiff_t d, counted<I> c) noexcept
 			requires std::random_access_iterator<I>
@@ -753,7 +767,7 @@ namespace fms::iterable {
 		constexpr counted& operator-=(difference_type d) noexcept
 			requires std::random_access_iterator<I>
 		{
-			I::operator-=(d);
+			i -= d;
 			n += d;
 
 			return *this;
@@ -761,22 +775,22 @@ namespace fms::iterable {
 		constexpr difference_type operator-(const counted& _i) const noexcept
 			requires std::random_access_iterator<I>
 		{
-			return I::operator-(_i);
+			return i - _i;
 		}
 		constexpr counted operator-(difference_type d) const noexcept
 			requires std::random_access_iterator<I>
 		{
-			return counted(I::operator-(d), n + d);
+			return counted(i - d, n + d);
 		}
 		constexpr reference operator[](difference_type d) const noexcept
 			requires std::random_access_iterator<I>
 		{
-			return I::operator[](d);
+			return i[d];
 		}
 		constexpr reference operator[](difference_type d) noexcept
 			requires std::random_access_iterator<I>
 		{
-			return I::operator[](d);
+			return i[d];
 		}
 	};
 
@@ -962,6 +976,7 @@ namespace fms::iterable {
 		}
 	};
 
+	// Iterable having one element.
 	template<class T>
 	constexpr auto single(T t)
 	{
@@ -997,6 +1012,7 @@ namespace fms::iterable {
 			return *this;
 		}
 		constexpr auto end() const
+			requires has_end<I0> && has_end<I1>
 		{
 			return concatenate2(i0.end(), i1.end());
 		}
@@ -1085,6 +1101,7 @@ namespace fms::iterable {
 			return *this;
 		}
 		constexpr auto end() const
+			requires has_end<I0> && has_end<I1>
 		{
 			return merge2(i0.end(), i1.end());
 		}
@@ -1193,6 +1210,11 @@ namespace fms::iterable {
 		copy_assignable& operator=(copy_assignable&&) = default;
 		~copy_assignable() = default;
 
+		constexpr operator F() const
+		{
+			return f.value(); // dangerous???
+		}
+
 		template<class... Args>
 		constexpr auto operator()(Args&&... args) const
 		{
@@ -1228,6 +1250,16 @@ namespace fms::iterable {
 		constexpr bool operator==(const apply& a) const
 		{
 			return i == a.i; // F is part of type
+		}
+
+		constexpr apply begin() const noexcept
+		{
+			return *this;
+		}
+		constexpr apply end() const noexcept
+			requires has_end<I>
+		{
+			return apply(f, i.end());
 		}
 
 		constexpr explicit operator bool() const
@@ -1282,6 +1314,26 @@ namespace fms::iterable {
 			constexpr bool operator==(const binop& o) const
 			{
 				return i0 == o.i0 && i1 == o.i1;
+			}
+
+			constexpr binop begin() const noexcept
+			{
+				return *this;
+			}
+			constexpr binop end() const noexcept
+				requires has_end<I0> || has_end<I1>
+			{
+				difference_type n0 = std::numeric_limits<difference_type>::max();
+				difference_type n1 = std::numeric_limits<difference_type>::max();
+				if constexpr (has_end<I0>) {
+					n0 = size(i0);
+				}
+				if constexpr (has_end<I1>) {
+					n1 = size(i1);
+				}
+				difference_type n = std::min(n0, n1);
+
+				return binop(op, drop(i0, n), drop(i1, n));
 			}
 
 			constexpr explicit operator bool() const
@@ -1348,6 +1400,16 @@ namespace fms::iterable {
 			return i == a.i; // P is part of type
 		}
 
+		constexpr filter begin() const noexcept
+		{
+			return *this;
+		}
+		constexpr filter end() const noexcept
+			requires has_end<I>
+		{
+			return filter(p, i.end());
+		}
+
 		constexpr explicit operator bool() const
 		{
 			return i.operator bool();
@@ -1400,6 +1462,18 @@ namespace fms::iterable {
 			return i == u.i;
 		}
 
+		constexpr until begin() const noexcept
+		{
+			return *this;
+		}
+		/* i.end() might not be end of until
+		constexpr until end() const noexcept
+			requires has_end<I>
+		{
+			return until(p, i.end());
+		}
+		*/
+
 		constexpr explicit operator bool() const
 		{
 			return i && !p(*i);
@@ -1451,6 +1525,18 @@ namespace fms::iterable {
 		{
 			return i == f.i && t == f.t;
 		}
+
+		constexpr fold begin() const noexcept
+		{
+			return *this;
+		}
+		/* have to fold to the end
+		constexpr fold end() const noexcept
+			requires has_end<I>
+		{
+			return fold(op, i.end(), t);
+		}
+		*/
 
 		constexpr explicit operator bool() const
 		{
@@ -1535,6 +1621,16 @@ namespace fms::iterable {
 			return i == _d.i && t == _d.t;
 		}
 
+		constexpr delta begin() const noexcept
+		{
+			return *this;
+		}
+		constexpr delta end() const noexcept
+			requires has_end<I>
+		{
+			return delta(end(i), d(*end(i), *last(i)));
+		}
+
 		constexpr explicit operator bool() const
 		{
 			return i.operator bool();
@@ -1593,6 +1689,17 @@ namespace fms::iterable {
 		constexpr ~tuple() = default;
 
 		constexpr bool operator==(const tuple& t) const = default;
+
+		constexpr tuple begin() const
+		{
+			return *this;
+		}
+		constexpr tuple end() const
+		{
+			size_t n = std::apply([](auto... i) { return std::min(size(i)...); }, is);
+
+			return std::apply([n](auto... i) { return drop(i, n); }, is);
+		}
 
 		constexpr explicit operator bool() const
 		{
