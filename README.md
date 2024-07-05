@@ -48,3 +48,7 @@ auto generate(iterable it)
 is an asynchronous generator coroutine.
 
 As you will see when you peruse the code, most functions involving iterables have a natural and pleasing implementation.
+
+## TODO
+
+Distinguish between iterables that have no end and genuinely infinite iterables.

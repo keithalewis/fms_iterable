@@ -1696,6 +1696,7 @@ namespace fms::iterable {
 		}
 		constexpr tuple end() const
 		{
+			// TODO: use size that returns INT_MAX if no end.
 			size_t n = std::apply([](auto... i) { return std::min(size(i)...); }, is);
 
 			return std::apply([n](auto... i) { return { drop(i, n)... }; }, is);
