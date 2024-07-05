@@ -1698,7 +1698,7 @@ namespace fms::iterable {
 		{
 			size_t n = std::apply([](auto... i) { return std::min(size(i)...); }, is);
 
-			return std::apply([n](auto... i) { return drop(i, n); }, is);
+			return std::apply([n](auto... i) { return { drop(i, n)... }; }, is);
 		}
 
 		constexpr explicit operator bool() const
