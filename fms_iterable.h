@@ -677,7 +677,7 @@ namespace fms::iterable {
 		constexpr counted& operator=(const counted&) = default;
 		constexpr counted(counted&&) = default;
 		constexpr counted& operator=(counted&&) = default;
-		constexpr ~counted() = default;
+		constexpr virtual ~counted() = default;
 
 		/*constexpr*/ auto operator<=>(const counted& i) const = default;
 
