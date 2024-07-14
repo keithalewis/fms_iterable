@@ -448,6 +448,10 @@ int delta_test()
 	{
 		auto d = delta(apply([](int i) { return i * i; }, take(iota(1), 3)));
 		assert(equal(d, { 4 - 1, 9 - 4 }));
+		auto e = d.end();
+		++d;
+		++d;
+		assert(d == e);
 	}
 
 	return 0;
@@ -497,6 +501,21 @@ int tuple_test()
 			auto [i, j, k] = *t;
 			assert(i == 2 && j == 3 && k == 4);
 		}
+	}
+	{
+		int i[] = { 1, 2, 3 };
+		int j[] = { 4, 5, 6 };
+		auto t = tuple(array(i), array(j));
+		auto t2{ t };
+		assert(t == t2);
+		t = t2;
+		assert(!(t2 != t));
+
+		assert(*t == std::make_tuple(1, 4));
+		++t;
+		assert(*t == std::make_tuple(2, 5));
+		//--t;
+		//assert(*t == std::make_tuple(1, 4));
 	}
 
 	return 0;

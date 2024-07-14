@@ -578,7 +578,7 @@ namespace fms::iterable {
 		}
 		//??? why not value_type
 		// indirectly readable
-		constexpr reference operator*() const noexcept
+		constexpr const reference& operator*() const noexcept
 		{
 			return *p;
 		}
@@ -628,7 +628,7 @@ namespace fms::iterable {
 		{
 			return ptr(p + d);
 		}
-		constexpr friend ptr<T> operator+(difference_type d, ptr<T> p) noexcept
+		constexpr friend ptr operator+(difference_type d, ptr p) noexcept
 		{
 			return p + d;
 		}
@@ -646,8 +646,7 @@ namespace fms::iterable {
 		{
 			return p - i.p;
 		}
-		// TODO: value_type
-		reference operator[](difference_type i) const noexcept
+		const reference& operator[](difference_type i) const noexcept
 		{
 			return p[i];
 		}
@@ -664,8 +663,8 @@ namespace fms::iterable {
 		std::size_t n;
 	public:
 		using iterator_category = typename I::iterator_category;
-		using value_type = typename I::value_type;
-		using reference = typename I::reference;
+		using value_type = std::iter_value_t<I>;
+		using reference = std::iter_reference_t<I>;
 		using pointer = typename I::pointer;
 		using difference_type = typename I::difference_type;
 
@@ -825,8 +824,8 @@ namespace fms::iterable {
 		I i, i0;
 	public:
 		using iterator_category = std::input_iterator_tag;
-		using value_type = typename I::value_type;
-		using reference = typename I::reference;
+		using value_type = std::iter_value_t<I>;
+		using reference = std::iter_reference_t<I>;
 		using pointer = typename I::pointer;
 		using difference_type = typename I::difference_type;
 
@@ -984,7 +983,7 @@ namespace fms::iterable {
 	}
 
 	// i0 then i1
-	template <class I0, class I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
+	template <class I0, class I1, class T = std::common_type_t<std::iter_value_t<I0>, std::iter_value_t<I1>>>
 	class concatenate2 {
 		I0 i0;
 		I1 i1;
@@ -1057,7 +1056,7 @@ namespace fms::iterable {
 	}
 
 	// Sorted i0 and i1 in order. Equivalent (!< and !>) elements are repeated.
-	template <class I0, class I1, class T = std::common_type_t<typename I0::value_type, typename I1::value_type>>
+	template <class I0, class I1, class T = std::common_type_t<std::iter_value_t<I0>, std::iter_value_t<I1>>>
 	class merge2 {
 		I0 i0;
 		I1 i1;
@@ -1067,7 +1066,7 @@ namespace fms::iterable {
 		using value_type = T;
 		using reference = T&;
 		using pointer = T*;
-		using difference_type = std::common_type_t<typename I0::difference_type, typename I0::difference_type>;
+		using difference_type = std::common_type_t<std::iter_difference_t<I0>, std::iter_difference_t<I1>>;
 
 		constexpr merge2() = default;
 		constexpr merge2(const I0& i0, const I1& i1)
@@ -1180,6 +1179,7 @@ namespace fms::iterable {
 	}
 
 	// copy assignable function object
+	// TODO: replace with std::copyable_function
 	template<class F>
 	class copy_assignable {
 		std::optional<F> f;
@@ -1235,7 +1235,7 @@ namespace fms::iterable {
 		using value_type = U;
 		using reference = U&;
 		using pointer = U*;
-		using difference_type = typename I::difference_type;
+		using difference_type = std::iter_difference_t<I>;
 
 		constexpr apply() = default;
 		constexpr apply(F f, const I& i)
@@ -1257,9 +1257,8 @@ namespace fms::iterable {
 			return *this;
 		}
 		constexpr apply end() const noexcept
-			requires has_end<I>
 		{
-			return apply(f, i.end());
+			return apply(f, iterable::end(i));
 		}
 
 		constexpr explicit operator bool() const
@@ -1284,6 +1283,63 @@ namespace fms::iterable {
 
 			return tmp;
 		}
+		// bidirectional
+		constexpr apply& operator--() noexcept
+			requires std::bidirectional_iterator<I>
+		{
+			--i;
+
+			return *this;
+		}
+		constexpr apply operator--(int) noexcept
+			requires std::bidirectional_iterator<I>
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
+		// random access
+		constexpr apply& operator+=(difference_type n) noexcept
+			requires std::random_access_iterator<I>
+		{
+			i += n;
+
+			return *this;
+		}
+		consteval apply operator+(difference_type n) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return apply(f, i + n);
+		}
+		constexpr friend apply operator+(difference_type n, apply a) noexcept
+			requires std::random_access_iterator<I>
+		{
+			return a + n;
+		}
+		constexpr apply& operator-=(difference_type n) noexcept
+			requires std::random_access_iterator<I>
+		{
+			i -= n;
+
+			return *this;
+		}
+		constexpr apply operator-(difference_type n) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return apply(f, i - n);
+		}
+		constexpr difference_type operator-(const apply& a) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return i - a.i;
+		}
+		const reference& operator[](difference_type n) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return f(i[n]);
+		}
 	};
 
 	// Apply a binary operation to elements of two iterable.
@@ -1297,7 +1353,7 @@ namespace fms::iterable {
 		I0 i0;
 		I1 i1;
 		public:
-			using iterator_category = std::input_iterator_tag;
+			using iterator_category = std::common_type_t<typename I0::iterator_category, typename I0::iterator_category>;
 			using value_type = T;
 			using reference = T&;
 			using difference_type = std::ptrdiff_t;
@@ -1323,15 +1379,7 @@ namespace fms::iterable {
 			constexpr binop end() const noexcept
 				requires has_end<I0> || has_end<I1>
 			{
-				difference_type n0 = std::numeric_limits<difference_type>::max();
-				difference_type n1 = std::numeric_limits<difference_type>::max();
-				if constexpr (has_end<I0>) {
-					n0 = size(i0);
-				}
-				if constexpr (has_end<I1>) {
-					n1 = size(i1);
-				}
-				difference_type n = std::min(n0, n1);
+				difference_type n = std::min(size(i0), size(i1));
 
 				return binop(op, drop(i0, n), drop(i1, n));
 			}
@@ -1358,6 +1406,66 @@ namespace fms::iterable {
 				operator++();
 
 				return b;
+			}
+			// bidirectional
+			constexpr binop& operator--() noexcept
+				requires std::bidirectional_iterator<I0> && std::bidirectional_iterator<I1>
+			{
+				--i0;
+				--i1;
+
+				return *this;
+			}
+			constexpr binop operator--(int) noexcept
+				requires std::bidirectional_iterator<I0> && std::bidirectional_iterator<I1>
+			{
+				auto b{ *this };
+
+				operator--();
+
+				return b;
+			}
+			// random access
+			constexpr binop& operator+=(difference_type n) noexcept
+				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
+			{
+				i0 += n;
+				i1 += n;
+
+				return *this;
+			}
+			constexpr binop operator+(difference_type n) const noexcept
+				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
+			{
+				return binop(op, i0 + n, i1 + n);
+			}
+			constexpr friend binop operator+(difference_type n, binop b) noexcept
+				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
+			{
+				return b + n;
+			}
+			constexpr binop& operator-=(difference_type n) noexcept
+				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
+			{
+				i0 -= n;
+				i1 -= n;
+
+				return *this;
+			}
+			constexpr binop operator-(difference_type n) const noexcept
+				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
+			{
+				return binop(op, i0 - n, i1 - n);
+			}
+			constexpr difference_type operator-(const binop& b) const noexcept
+				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
+			{
+				return i0 - b.i0;
+			}
+			const reference& operator[](difference_type n) const noexcept
+				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
+			{
+				return op(i0[n], i1[n]);
 			}
 	};
 
@@ -1436,7 +1544,7 @@ namespace fms::iterable {
 	};
 
 	// Stop at first element satisfying predicate.
-	template <class P, class I, class T = typename I::value_type>
+	template <class P, class I, class T = std::iter_value_t<I>>
 	class until {
 		copy_assignable<P> p;
 		I i;
@@ -1499,7 +1607,7 @@ namespace fms::iterable {
 	};
 
 	// Right fold: of op
-	template <class BinOp, class I, class T = typename I::value_type>
+	template <class BinOp, class I, class T = std::iter_value_t<I>>
 	class fold {
 		copy_assignable<BinOp> op;
 		I i;
@@ -1565,7 +1673,7 @@ namespace fms::iterable {
 		}
 	};
 
-	template <class I, class T = typename I::value_type>
+	template <class I, class T = std::iter_value_t<I>>
 	inline auto sum(I i, T t = 0)
 	{
 		while (i) {
@@ -1576,7 +1684,7 @@ namespace fms::iterable {
 		return t;
 	}
 
-	template <class I, class T = typename I::value_type>
+	template <class I, class T = std::iter_value_t<I>>
 	inline auto prod(I i, T t = 1)
 	{
 		while (i) {
@@ -1588,7 +1696,7 @@ namespace fms::iterable {
 	}
 
 	// d(i[1], i[0]), d(i[2], i[1]), ...
-	template <class I, class T = typename I::value_type, class D = std::minus<T>, 
+	template <class I, class T = std::iter_value_t<I>, class D = std::minus<T>, 
 		typename U = std::invoke_result_t<D, T, T>>
 	class delta {
 		copy_assignable<D> d;
@@ -1602,8 +1710,8 @@ namespace fms::iterable {
 		using difference_type = std::ptrdiff_t;
 
 		constexpr delta() = default;
-		constexpr delta(const I& _i, D _d = std::minus<T>{})
-			: d(std::move(_d)), i(_i), t{}
+		constexpr delta(const I& _i, T _t = 0, D _d = std::minus<T>{})
+			: d(std::move(_d)), i(_i), t(_t)
 		{
 			if (i) {
 				t = *i;
@@ -1626,9 +1734,8 @@ namespace fms::iterable {
 			return *this;
 		}
 		constexpr delta end() const noexcept
-			requires has_end<I>
 		{
-			return delta(end(i), d(*end(i), *last(i)));
+			return delta(last(i));
 		}
 
 		constexpr explicit operator bool() const
@@ -1659,12 +1766,12 @@ namespace fms::iterable {
 	};
 
 	// uptick + downtick = delta
-	template <class I, class T = typename I::value_type>
+	template <class I, class T = std::iter_value_t<I>>
 	inline auto uptick(I i)
 	{
 		return delta(i, [](T a, T b) { return std::max<T>(b - a, 0); });
 	}
-	template <class I, class T = typename I::value_type>
+	template <class I, class T = std::iter_value_t<I>>
 	inline auto downtick(I i)
 	{
 		return delta(i, [](T a, T b) { return std::min<T>(b - a, 0); });
@@ -1674,8 +1781,8 @@ namespace fms::iterable {
 	class tuple {
 		std::tuple<Is...> is;
 	public:
-		using iterator_category = std::input_iterator_tag;
-		using value_type = std::tuple<typename Is::value_type...>;
+		using iterator_category = std::common_type_t<typename Is::iterator_category...>;
+		using value_type = std::tuple<std::iter_value_t<Is>...>;
 		using reference = value_type&;
 		using difference_type = std::ptrdiff_t;
 
@@ -1723,6 +1830,63 @@ namespace fms::iterable {
 			operator++();
 
 			return tmp;
+		}
+		// bidirectional
+		constexpr tuple& operator--() noexcept
+			requires (std::bidirectional_iterator<Is> && ...)
+		{
+			std::apply([](auto&... i) { (--i, ...); }, is);
+
+			return *this;
+		}
+		constexpr tuple operator--(int) noexcept
+			requires (std::bidirectional_iterator<Is> && ...)
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
+		// random access
+		constexpr tuple& operator+=(difference_type n) noexcept
+			requires (std::random_access_iterator<Is> && ...)
+		{
+			std::apply([n](auto&... i) { ((i += n), ...); }, is);
+
+			return *this;
+		}
+		constexpr tuple operator+(difference_type n) const noexcept
+			requires (std::random_access_iterator<Is> && ...)
+		{
+			return std::apply([n](auto... i) { ((i + n), ...); }, is);
+		}
+		constexpr friend tuple operator+(difference_type n, tuple t) noexcept
+			requires (std::random_access_iterator<Is> && ...)
+		{
+			return t += n;
+		}
+		constexpr tuple& operator-=(difference_type n) noexcept
+			requires (std::random_access_iterator<Is> && ...)
+		{
+			std::apply([n](auto&... i) { ((i -= n), ...); }, is);
+
+			return *this;
+		}
+		constexpr tuple operator-(difference_type n) const noexcept
+			requires (std::random_access_iterator<Is> && ...)
+		{
+			return std::apply([n](auto... i) { ((i - n), ...); }, is);
+		}
+		const reference& operator[](difference_type n) const noexcept
+			requires (std::random_access_iterator<Is> && ...)
+		{
+			return std::apply([n](auto... i) { return std::make_tuple(i[n]...); }, is);
+		}
+		reference operator[](difference_type n) noexcept
+			requires (std::random_access_iterator<Is> && ...)
+		{
+			return std::apply([n](auto... i) { return std::make_tuple(i[n]...); }, is);
 		}
 	};
 
