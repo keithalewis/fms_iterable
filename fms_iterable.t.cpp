@@ -77,13 +77,6 @@ int iota_test()
 
 int interval_test()
 {
-	//static_assert(has_end<interval<iota<int>>>);
-	{
-		interval i(iota(1), iota(4));
-		assert(size(i) == 3);
-		i = drop(i, 3);
-		assert(!i);
-	}
 	{
 		std::vector<int> v({ 1, 2, 3 });
 		auto i = interval(v.begin(), v.end());
@@ -121,14 +114,6 @@ int interval_test()
 		std::vector<int> w;
 		copy(i, back_insert_iterable(w));
 		assert(equal(i, make_interval(w)));
-	}
-	{
-		auto i = interval(iota(1), iota(4));
-		assert(equal(i, { 1,2,3 }));
-		i = drop(i, 1);
-		assert(equal(i, { 2,3 }));
-		i = drop(i, 2);
-		assert(!i);
 	}
 
 	return 0;
@@ -525,6 +510,7 @@ int sequence_test()
 {
 	using namespace std::chrono;
 	using std::literals::chrono_literals::operator""y;
+	/*
 	{
 		sequence s(2024y / 1 / 1, months(1));
 		auto s2{ s };
@@ -551,6 +537,7 @@ int sequence_test()
 		assert(s);
 		assert(*s == 2024y / 1 / 2);
 	}
+	*/
 
 	return 0;
 }

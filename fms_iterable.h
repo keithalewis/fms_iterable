@@ -193,7 +193,7 @@ namespace fms::iterable {
 	constexpr std::iter_difference_t<I> size(I i, std::iter_difference_t<I> n = 0) noexcept
 	{
 		if constexpr (has_size<I>) {
-			return i.size();
+			return n + i.size();
 		}
 		else if constexpr (has_end<I>) {
 			return n + std::distance(i, i.end());
@@ -212,18 +212,23 @@ namespace fms::iterable {
 	template <class I>
 	constexpr I drop(I i, std::iter_difference_t<I> n) noexcept
 	{
-		if constexpr (has_end<I>) {
-			return std::next(i, std::min(n, size(i)));
-		}
-		else {
-			if (n > 0) {
+		if (n > 0) {
+			if constexpr (has_end<I>) {
+				return std::next(i, std::min(n, size(i)));
+			}
+			else {
 				while (n-- && i) {
 					++i;
 				}
-			}
 
-			return i;
+				return i;
+			}
 		}
+		else if (n < 0) {
+			return end(i) + n;
+		}
+
+		return i; // n == 0
 	}
 
 	// Iterable over [b, e)
@@ -269,7 +274,7 @@ namespace fms::iterable {
 	class iota {
 		T t;
 	public:
-		using iterator_category = std::input_iterator_tag;
+		using iterator_category = std::random_access_iterator_tag;
 		using value_type = T;
 		using reference = T&;
 		using pointer = T*;
@@ -325,26 +330,69 @@ namespace fms::iterable {
 
 			return tmp;
 		}
-		// random access???
-	};
+		// random access
+		constexpr iota& operator+=(difference_type d) noexcept
+		{
+			t += T(d);
 
-	// t, t + d, t + d + d, ...
-	template<class T, class D>
+			return *this;
+		}
+		constexpr iota operator+(difference_type d) const noexcept
+		{
+			return iota(t + T(d));
+		}
+		constexpr friend iota operator+(difference_type d, iota i) noexcept
+		{
+			return i + T(d);
+		}
+		constexpr iota& operator-=(difference_type d) noexcept
+		{
+			t -= T(d);
+
+			return *this;
+		}
+		constexpr iota operator-(difference_type d) const noexcept
+		{
+			return iota(t - T(d));
+		}
+		constexpr difference_type operator-(const iota& i) const noexcept
+		{
+			return static_cast<difference_type>(t - i.t);
+		}
+		constexpr value_type operator[](difference_type d) const noexcept
+		{
+			return t + T(d);
+		}
+	};
+	static_assert(std::is_same_v<std::iter_value_t<iota<int>>, int>);
+	static_assert(std::random_access_iterator<iota<int>>);
+
+	// t, op(t, dt), op(op(t,dt), dt), ...
+	template<class T, class DT, class Op = std::plus<T>>
 	class sequence {
 		T t;
-		D d;
+		DT dt;
+		Op op;
 	public:
-		using iterator_category = std::input_iterator_tag;
+		using iterator_category = std::random_access_iterator_tag;
 		using value_type = T;
 		using reference = T&;
 		using pointer = T*;
 		using difference_type = std::ptrdiff_t;
 
-		constexpr sequence(T t, D d)
-			: t(t), d(d)
+		constexpr sequence()
+		{ };
+		constexpr sequence(T t, DT dt, Op op = std::plus<T>{})
+			: t(t), dt(dt), op(op)
 		{ }
+		constexpr sequence(const sequence&) = default;
+		constexpr sequence& operator=(const sequence&) = default;
+		constexpr virtual ~sequence() = default;
 
-		constexpr bool operator==(const sequence&) const = default;
+		constexpr auto operator<=>(const sequence& s) const
+		{
+			return t <=> s.t || dt <=> s.dt;
+		}
 
 		sequence begin() const
 		{
@@ -362,7 +410,7 @@ namespace fms::iterable {
 		}
 		constexpr sequence& operator++() noexcept
 		{
-			t += d;
+			t = op(t, dt);
 
 			return *this;
 		}
@@ -374,7 +422,57 @@ namespace fms::iterable {
 
 			return tmp;
 		}
+		// bidirectional
+		constexpr sequence& operator--() noexcept
+		{
+			t = op(t, -dt);
+
+			return *this;
+		}
+		constexpr sequence operator--(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
+		// random access
+		constexpr sequence& operator+=(difference_type d) noexcept
+		{
+			t = op(t, d * dt);
+
+			return *this;
+		}
+		constexpr sequence operator+(difference_type d) const noexcept
+		{
+			return sequence(operator+=(d), dt);
+		}
+		constexpr friend sequence operator+(difference_type d, sequence s) noexcept
+		{
+			return s + d;
+		}
+		constexpr sequence& operator-=(difference_type d) noexcept
+		{
+			t = op(t, -d * dt);
+
+			return *this;
+		}
+		constexpr sequence operator-(difference_type d) const noexcept
+		{
+			return sequence(operator-=(d), dt);
+		}
+		constexpr difference_type operator-(const sequence& s) const noexcept
+		{
+			return (t - s.t) / dt;
+		}
+		constexpr value_type operator[](difference_type d) const noexcept
+		{
+			return t + d * dt;
+		}
 	};
+
+	//static_assert(std::random_access_iterator<sequence<int,int,std::plus<int>>>);
 
 	// tn, tn*t, tn*t*t, ...
 	template <class T>
@@ -655,6 +753,7 @@ namespace fms::iterable {
 			return p[i];
 		}
 	};
+	static_assert(std::random_access_iterator<ptr<int>>);
 
 	// Iterable over [i, i + n).
 	template<class I>
@@ -678,19 +777,19 @@ namespace fms::iterable {
 		constexpr counted& operator=(counted&&) = default;
 		constexpr virtual ~counted() = default;
 
-		/*constexpr*/ auto operator<=>(const counted& i) const = default;
-
+		/*constexpr*/ auto operator<=>(const counted& i_) const = default;
+		// i <=> i_.i || n <=> i_.n;
 		constexpr counted begin() const
 		{
 			return counted(i, n);
 		}
 		constexpr counted end() const
 		{
-			return counted(drop(i, n), 0);
+			return counted(drop(i, static_cast<int>(n)), 0);
 		}
 		constexpr std::size_t size() const noexcept
 		{
-			return n;
+			return static_cast<std::size_t>(n);
 		}
 
 		constexpr explicit operator bool() const noexcept
@@ -698,7 +797,8 @@ namespace fms::iterable {
 			return n != 0;
 		}
 		// indirectly readable
-		constexpr value_type operator*() const noexcept
+		// TODO: why not value_type?
+		constexpr reference operator*() const noexcept
 		{
 			return *i;
 		}
@@ -792,6 +892,7 @@ namespace fms::iterable {
 			return i[d];
 		}
 	};
+	static_assert(std::random_access_iterator<counted<ptr<int>>>);
 
 	// Assumes lifetime of a.
 	template<class T, std::size_t N>
@@ -804,11 +905,18 @@ namespace fms::iterable {
 	template<class I>
 	constexpr auto take(I i, std::iter_difference_t<I> n)
 	{
-		if constexpr (has_end<I>) {
-			n = std::min(n, size(i));
+		if (n > 0) { // take n from front
+			if constexpr (has_end<I>) {
+				n = std::min(n, size(i));
+			}
+
+			return counted(i, n);
+		}
+		else if (n < 0) { // take -n from back
+			return counted(i + n, -n);
 		}
 
-		return counted(i, n);
+		return counted(i, 0);
 	}
 	// Iterable with no elements.
 	template<class T>
