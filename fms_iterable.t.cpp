@@ -75,6 +75,27 @@ int iota_test()
 	return 0;
 }
 
+int factorial_test()
+{
+	{
+		factorial f;
+		assert(f);
+		assert(*f == 1);
+		++f;
+		assert(*f == 1);
+		++f;
+		assert(*f == 2);
+		--f;
+		assert(*f == 1);
+		--f;
+		assert(*f == 1);
+		--f;
+		assert(*f == 1);
+	}
+
+	return 0;
+}
+
 int interval_test()
 {
 	{
@@ -275,6 +296,20 @@ int repeat_test()
 	return 0;
 }
 
+int rotate_test()
+{
+	{
+		auto i = take(iota(1), 3);
+		assert(equal(i, {1,2,3 }));
+		auto j = rotate(i, 1);
+		assert(equal(j, { 2,3,1 }));
+		// TODO: not working
+//		auto k = rotate(j, -2);
+//		assert(equal(k, { 3,1,2 }));
+	}
+
+	return 0;
+}
 int constant_test()
 {
 	static_assert(std::random_access_iterator<constant<int>>);
@@ -565,10 +600,12 @@ int main()
 {
 	drop_test();
 	iota_test();
+	factorial_test();
 	interval_test();
 	ptr_test();
 	counted_test();
 	repeat_test();
+	rotate_test();
 	constant_test();
 	concatenate_test();
 	merge_test();

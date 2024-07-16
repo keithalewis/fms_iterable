@@ -252,7 +252,7 @@ namespace fms::iterable {
 		using difference_type = std::iter_difference_t<I>;
 
 		constexpr interval(I i, I e)
-			: I(i), e(e)
+			: I(std::move(i)), e(std::move(e))
 		{ }
 		constexpr interval(const interval& i) = default;
 		constexpr interval& operator=(const interval& i) = default;
@@ -602,6 +602,23 @@ namespace fms::iterable {
 
 			return tmp;
 		}
+		// bidirectional
+		constexpr factorial& operator--() noexcept
+		{
+			if (n > 1) {
+				t /= --n;
+			}
+
+			return *this;
+		}
+		constexpr factorial operator--(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
 	};
 
 	// 1, n, n*(n-1)/2, ..., 1
@@ -657,6 +674,7 @@ namespace fms::iterable {
 
 			return tmp;
 		}
+		// TODO: bidirectional
 	};
 
 	// Unsafe pointer iterable with std::span/view semantics.
@@ -931,7 +949,12 @@ namespace fms::iterable {
 			return counted(i, n);
 		}
 		else if (n < 0) { // take -n from back
-			return counted(i + n, -n);
+			if constexpr (has_end<I>) {
+				n = std::min(-n, size(i));
+
+				return counted(i + n, -n);
+			}
+			// TODO: ???
 		}
 
 		return counted(i, 0);
@@ -942,7 +965,6 @@ namespace fms::iterable {
 	{
 		return take(ptr<T>(), 0);
 	}
-
 
 	// Cycle over iterator values.
 	template<class I>
@@ -1004,8 +1026,10 @@ namespace fms::iterable {
 		}
 	};
 
+	// TODO: rotate(rotate()) adds cruft
 	template<class I>
 	constexpr auto rotate(I i, std::iter_difference_t<I> n)
+		requires has_end<I>
 	{
 		return take(drop(repeat(i), n), size(i));
 	}
@@ -1121,8 +1145,8 @@ namespace fms::iterable {
 		using difference_type = std::common_type_t<typename I0::difference_type, typename I1::difference_type>;
 
 		constexpr concatenate2() = default;
-		constexpr concatenate2(const I0& i0, const I1& i1)
-			: i0(i0), i1(i1)
+		constexpr concatenate2(I0 i0, I1 i1)
+			: i0(std::move(i0)), i1(std::move(i1))
 		{ }
 		constexpr concatenate2(const concatenate2&) = default;
 		constexpr concatenate2& operator=(const concatenate2&) = default;
@@ -1196,7 +1220,7 @@ namespace fms::iterable {
 
 		constexpr merge2() = default;
 		constexpr merge2(I0 i0, I1 i1)
-			: i0(i0), i1(i1), _0(true)
+			: i0(std::move(i0)), i1(std::move(i1)), _0(true)
 		{
 			if (i0 && i1) {
 				if (*i1 < *i0) {
@@ -1301,7 +1325,7 @@ namespace fms::iterable {
 	template<class I, class ...Is>
 	constexpr auto merge(I i, Is... is)
 	{
-		return merge2(i, merge(is...));
+		return merge2(std::move(i), merge(std::move(is)...));
 	}
 
 	// copy assignable function object
@@ -1366,7 +1390,7 @@ namespace fms::iterable {
 
 		constexpr apply() = default;
 		constexpr apply(F f, I i)
-			: f(std::move(f)), i(i)
+			: f(std::move(f)), i(std::move(i))
 		{ }
 		constexpr apply(const apply& a) = default;
 		constexpr apply& operator=(const apply& a) = default;
@@ -1487,7 +1511,7 @@ namespace fms::iterable {
 			using difference_type = std::ptrdiff_t;
 
 			constexpr binop(BinOp op, I0 i0, I1 i1)
-				: op(std::move(op)), i0(i0), i1(i1)
+				: op(std::move(op)), i0(std::move(i0)), i1(std::move(i1))
 			{ }
 			constexpr binop(const binop& o) = default;
 			constexpr binop& operator=(const binop& o) = default;
@@ -1620,8 +1644,8 @@ namespace fms::iterable {
 		using difference_type = typename I::difference_type;
 
 		constexpr filter() = default;
-		constexpr filter(P p, const I& i)
-			: p(std::move(p)), i(i)
+		constexpr filter(P p, I i)
+			: p(std::move(p)), i(std::move(i))
 		{
 			next();
 		}
@@ -1685,7 +1709,7 @@ namespace fms::iterable {
 
 		constexpr until() = default;
 		constexpr until(P p, I i)
-			: p(std::move(p)), i(i)
+			: p(std::move(p)), i(std::move(i))
 		{ }
 		constexpr until(const until&) = default;
 		constexpr until& operator=(const until&) = default;
@@ -1748,8 +1772,8 @@ namespace fms::iterable {
 		using difference_type = std::ptrdiff_t;
 
 		constexpr fold() = default;
-		constexpr fold(BinOp op, const I& i, T t = 0)
-			: op(std::move(op)), i(i), t(t)
+		constexpr fold(BinOp op, I i, const T& t = 0)
+			: op(std::move(op)), i(std::move(i)), t(t)
 		{ }
 		constexpr fold(const fold& f) = default;
 		constexpr fold& operator=(const fold& f) = default;
@@ -1838,8 +1862,8 @@ namespace fms::iterable {
 		using difference_type = std::ptrdiff_t;
 
 		constexpr delta() = default;
-		constexpr delta(const I& _i, T _t = 0, D _d = std::minus<T>{})
-			: d(std::move(_d)), i(_i), t(_t)
+		constexpr delta(I _i, const T& _t = 0, D _d = std::minus<T>{})
+			: d(std::move(_d)), i(std::move(_i)), t(_t)
 		{
 			if (i) {
 				t = *i;
@@ -1917,8 +1941,8 @@ namespace fms::iterable {
 		constexpr tuple(Is... is)
 			: is(is...)
 		{ }
-		constexpr tuple(const std::tuple<Is...>& is)
-			: is(is)
+		constexpr tuple(std::tuple<Is...> is)
+			: is(std::move(is))
 		{ }
 		constexpr tuple(const tuple&) = default;
 		constexpr tuple& operator=(const tuple&) = default;
