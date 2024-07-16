@@ -367,12 +367,11 @@ namespace fms::iterable {
 	static_assert(std::is_same_v<std::iter_value_t<iota<int>>, int>);
 	static_assert(std::random_access_iterator<iota<int>>);
 
-	// t, op(t, dt), op(op(t,dt), dt), ...
-	template<class T, class DT, class Op = std::plus<T>>
+	// t, t + dt, (t + dt) + dt, ...
+	template<class T, class DT>
 	class sequence {
 		T t;
 		DT dt;
-		Op op;
 	public:
 		using iterator_category = std::random_access_iterator_tag;
 		using value_type = T;
@@ -382,16 +381,20 @@ namespace fms::iterable {
 
 		constexpr sequence()
 		{ };
-		constexpr sequence(T t, DT dt, Op op = std::plus<T>{})
-			: t(t), dt(dt), op(op)
+		constexpr sequence(T t, DT dt)
+			: t(t), dt(dt)
 		{ }
 		constexpr sequence(const sequence&) = default;
 		constexpr sequence& operator=(const sequence&) = default;
 		constexpr virtual ~sequence() = default;
 
-		constexpr auto operator<=>(const sequence& s) const
+		constexpr bool operator==(const sequence& s) const
 		{
-			return t <=> s.t || dt <=> s.dt;
+			return t == s.t && dt == s.dt;
+		}
+		constexpr bool operator<(const sequence& s) const
+		{
+			return t < s.t || (t == s.t && dt < s.dt);	
 		}
 
 		sequence begin() const
@@ -410,7 +413,7 @@ namespace fms::iterable {
 		}
 		constexpr sequence& operator++() noexcept
 		{
-			t = op(t, dt);
+			t = t + dt;
 
 			return *this;
 		}
@@ -425,7 +428,7 @@ namespace fms::iterable {
 		// bidirectional
 		constexpr sequence& operator--() noexcept
 		{
-			t = op(t, -dt);
+			t = t - dt;
 
 			return *this;
 		}
@@ -440,7 +443,7 @@ namespace fms::iterable {
 		// random access
 		constexpr sequence& operator+=(difference_type d) noexcept
 		{
-			t = op(t, d * dt);
+			t = t + d * dt;
 
 			return *this;
 		}
@@ -454,7 +457,7 @@ namespace fms::iterable {
 		}
 		constexpr sequence& operator-=(difference_type d) noexcept
 		{
-			t = op(t, -d * dt);
+			t = t - d * dt;
 
 			return *this;
 		}
@@ -1177,8 +1180,8 @@ namespace fms::iterable {
 		using difference_type = std::common_type_t<std::iter_difference_t<I0>, std::iter_difference_t<I1>>;
 
 		constexpr merge2() = default;
-		constexpr merge2(const I0& i0, const I1& i1)
-			: i0(i0), i1(i1)
+		constexpr merge2(I0 i0, I1 i1)
+			: i0(i0), i1(i1), _0(true)
 		{
 			if (i0 && i1) {
 				if (*i1 < *i0) {
@@ -1297,6 +1300,7 @@ namespace fms::iterable {
 			: f(std::move(f))
 		{ }
 		copy_assignable(const copy_assignable& a)
+			: f{}
 		{
 			f.reset();
 			if (a.f.has_value()) {
@@ -1346,7 +1350,7 @@ namespace fms::iterable {
 		using difference_type = std::iter_difference_t<I>;
 
 		constexpr apply() = default;
-		constexpr apply(F f, const I& i)
+		constexpr apply(F f, I i)
 			: f(std::move(f)), i(i)
 		{ }
 		constexpr apply(const apply& a) = default;
@@ -1664,7 +1668,7 @@ namespace fms::iterable {
 		using difference_type = typename I::difference_type;
 
 		constexpr until() = default;
-		constexpr until(P p, const I& i)
+		constexpr until(P p, I i)
 			: p(std::move(p)), i(i)
 		{ }
 		constexpr until(const until&) = default;
@@ -1897,6 +1901,9 @@ namespace fms::iterable {
 		constexpr tuple(Is... is)
 			: is(is...)
 		{ }
+		constexpr tuple(const std::tuple<Is...>& is)
+			: is(is)
+		{ }
 		constexpr tuple(const tuple&) = default;
 		constexpr tuple& operator=(const tuple&) = default;
 		constexpr tuple(tuple&&) = default;
@@ -1967,7 +1974,10 @@ namespace fms::iterable {
 		constexpr tuple operator+(difference_type n) const noexcept
 			requires (std::random_access_iterator<Is> && ...)
 		{
-			return std::apply([n](auto... i) { ((i + n), ...); }, is);
+			auto is_ = is;
+			std::apply([n](auto&... i) { ((i += n), ...); }, is_);
+
+			return tuple(is_);
 		}
 		constexpr friend tuple operator+(difference_type n, tuple t) noexcept
 			requires (std::random_access_iterator<Is> && ...)
@@ -1984,7 +1994,10 @@ namespace fms::iterable {
 		constexpr tuple operator-(difference_type n) const noexcept
 			requires (std::random_access_iterator<Is> && ...)
 		{
-			return std::apply([n](auto... i) { ((i - n), ...); }, is);
+			auto is_ = is;
+			std::apply([n](auto&... i) { ((i -= n), ...); }, is_);
+
+			return tuple(is_);
 		}
 		const reference& operator[](difference_type n) const noexcept
 			requires (std::random_access_iterator<Is> && ...)

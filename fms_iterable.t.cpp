@@ -237,6 +237,7 @@ int counted_test()
 	//static_assert(std::random_access_iterator<counted<ptr<int>>>);
 	{
 		auto c = counted(iota(1), 3);
+		assert(c);
 		auto c2{ c };
 		assert(c == c2);
 		c = c2;
@@ -249,6 +250,12 @@ int counted_test()
 		assert(*c == 3);
 		++c;
 		assert(!c);
+		--c;
+		assert(*c == 3);
+		c -= 2;
+		assert(*c == 1);
+		c = c + 1;
+		assert(*c == 2);
 	}
 
 	return 0;
@@ -491,6 +498,7 @@ int tuple_test()
 		int i[] = { 1, 2, 3 };
 		int j[] = { 4, 5, 6 };
 		auto t = tuple(array(i), array(j));
+		assert(t);
 		auto t2{ t };
 		assert(t == t2);
 		t = t2;
@@ -499,8 +507,12 @@ int tuple_test()
 		assert(*t == std::make_tuple(1, 4));
 		++t;
 		assert(*t == std::make_tuple(2, 5));
-		//--t;
-		//assert(*t == std::make_tuple(1, 4));
+		--t;
+		assert(*t == std::make_tuple(1, 4));
+		t += 1;
+		assert(*t == std::make_tuple(2, 5));
+		auto u = t - 1;
+		assert(*u == std::make_tuple(1, 4));
 	}
 
 	return 0;
@@ -510,7 +522,6 @@ int sequence_test()
 {
 	using namespace std::chrono;
 	using std::literals::chrono_literals::operator""y;
-	/*
 	{
 		sequence s(2024y / 1 / 1, months(1));
 		auto s2{ s };
@@ -537,7 +548,6 @@ int sequence_test()
 		assert(s);
 		assert(*s == 2024y / 1 / 2);
 	}
-	*/
 
 	return 0;
 }
