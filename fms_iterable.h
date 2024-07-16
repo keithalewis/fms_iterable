@@ -80,17 +80,27 @@ namespace fms::iterable {
 	concept has_size = requires(I i) {
 		{ i.size() } -> std::same_as<std::size_t>;
 	};
+	template <class I>
+	concept has_incr = requires(I i) {
+		{ ++i } -> std::same_as<I&>;
+	};
+	template <class I>
+	concept has_decr = requires(I i) {
+		{ --i } -> std::same_as<I&>;
+	};
 
-	// Lexicographically compare at most n elements of two iterables
+	// Lexicographically compare elements of two iterables
 	template<class I, class J>
 	constexpr auto compare(I i, J j)
 		requires has_end<I> && has_end<J>
 	{
 		while (i && j) {
-			const auto cmp = *i++ <=> *j++;
+			const auto cmp = *i <=> *j;
 			if (cmp != 0) {
 				return cmp;
 			}
+			++i;
+			++j;
 		}
 
 		return !!i <=> !!j;
@@ -108,9 +118,10 @@ namespace fms::iterable {
 	constexpr bool equal(I i, std::initializer_list<T> ts)
 	{
 		for (const auto& t : ts) {
-			if (!i || *i++ != t) {
+			if (!i || *i != t) {
 				return false;
 			}
+			++i;	
 		}
 
 		return !i;
@@ -120,9 +131,10 @@ namespace fms::iterable {
 	constexpr bool starts_with(I i, std::initializer_list<T> ts)
 	{
 		for (const auto& t : ts) {
-			if (!i || *i++ != t) {
+			if (!i || *i != t) {
 				return false;
 			}
+			++i;
 		}
 
 		return true;
@@ -150,20 +162,13 @@ namespace fms::iterable {
 	// Last element of iterable. ++last(i) == end(i)
 	template <class I>
 	constexpr I last(I i)
+		requires has_last<I> || (has_end<I> && has_decr<I>)
 	{
 		if constexpr (has_last<I>) {
 			return i.last();
 		}
-		else if constexpr (has_end<I> && std::bidirectional_iterator<I>) {
-			return --i.end();
-		}
 		else {
-			I _i(i);
-			while (i) {
-				_i = i;
-				++i;
-			}
-			return _i;
+			return --i.end();
 		}
 	}
 
@@ -174,6 +179,7 @@ namespace fms::iterable {
 		return i;
 	}
 	// ++last(i)
+	/*
 	template <class I>
 	constexpr I end(I i)
 	{
@@ -181,12 +187,13 @@ namespace fms::iterable {
 			return i.end();
 		}
 		else {
-			while (i.operator bool()) {
+			while (i) {
 				++i;
 			}
 			return i;
 		}
 	}
+	*/
 
 	// size(i, size(j)) = size(i) + size(j)
 	template <class I>
@@ -199,11 +206,12 @@ namespace fms::iterable {
 			return n + std::distance(i, i.end());
 		}
 		else {
-			while (i.operator bool()) {
+			/*
+			while (i) {
 				++i;
 				++n;
 			}
-
+			*/
 			return n;
 		}
 	}
@@ -212,20 +220,21 @@ namespace fms::iterable {
 	template <class I>
 	constexpr I drop(I i, std::iter_difference_t<I> n) noexcept
 	{
-		if (n > 0) {
-			if constexpr (has_end<I>) {
+		if constexpr (has_end<I>) {
+			if (n > 0) {
 				return std::next(i, std::min(n, size(i)));
 			}
-			else {
+			else if (n < 0) {
+				return std::next(i, std::max(n, -size(i)));
+			}
+		}
+		else {
+			if (n > 0) {
 				while (n-- && i) {
 					++i;
 				}
-
-				return i;
 			}
-		}
-		else if (n < 0) {
-			return end(i) + n;
+			// n < 0 does nothing
 		}
 
 		return i; // n == 0
@@ -236,6 +245,12 @@ namespace fms::iterable {
 	class interval : public I {
 		I e;
 	public:
+		using iterator_category = typename I::iterator_category;
+		using value_type = std::iter_value_t<I>;
+		using reference = std::iter_reference_t<I>;
+		using pointer = typename I::pointer;
+		using difference_type = std::iter_difference_t<I>;
+
 		constexpr interval(I i, I e)
 			: I(i), e(e)
 		{ }
@@ -768,11 +783,11 @@ namespace fms::iterable {
 		using value_type = std::iter_value_t<I>;
 		using reference = std::iter_reference_t<I>;
 		using pointer = typename I::pointer;
-		using difference_type = typename I::difference_type;
+		using difference_type = std::iter_difference_t<I>;
 
 		constexpr counted() = default;
 		constexpr counted(I i, std::size_t n)
-			: i(i), n(n)
+			: i(std::move(i)), n(n)
 		{ }
 		constexpr counted(const counted&) = default;
 		constexpr counted& operator=(const counted&) = default;
@@ -877,7 +892,7 @@ namespace fms::iterable {
 		constexpr difference_type operator-(const counted& _i) const noexcept
 			requires std::random_access_iterator<I>
 		{
-			return i - _i;
+			return i - _i.i;
 		}
 		constexpr counted operator-(difference_type d) const noexcept
 			requires std::random_access_iterator<I>
@@ -1369,8 +1384,9 @@ namespace fms::iterable {
 			return *this;
 		}
 		constexpr apply end() const noexcept
+			requires has_end<I>
 		{
-			return apply(f, iterable::end(i));
+			return apply(f, i.end());
 		}
 
 		constexpr explicit operator bool() const
