@@ -242,8 +242,8 @@ namespace fms::iterable {
 
 	// Iterable over [b, e)
 	template<class I>
-	class interval : public I {
-		I e;
+	class interval {
+		I b, e;
 	public:
 		using iterator_category = typename I::iterator_category;
 		using value_type = std::iter_value_t<I>;
@@ -251,8 +251,8 @@ namespace fms::iterable {
 		using pointer = typename I::pointer;
 		using difference_type = std::iter_difference_t<I>;
 
-		constexpr interval(I i, I e)
-			: I(std::move(i)), e(std::move(e))
+		constexpr interval(I b, I e)
+			: b(std::move(b)), e(std::move(e))
 		{ }
 		constexpr interval(const interval& i) = default;
 		constexpr interval& operator=(const interval& i) = default;
@@ -273,7 +273,97 @@ namespace fms::iterable {
 
 		constexpr explicit operator bool() const noexcept
 		{
-			return *this != e;
+			return b != e;
+		}
+
+		constexpr const reference& operator*() const noexcept
+		{
+			return *b;
+		}
+		constexpr reference operator*() noexcept
+		{
+			return *b;
+		}
+
+		constexpr interval& operator++() noexcept
+		{
+			if (b != e) {
+				++b;
+			}
+
+			return *this;
+		}
+		constexpr interval operator++(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator++();
+
+			return tmp;
+		}
+		// bidirectional
+		constexpr interval& operator--() noexcept
+			requires std::bidirectional_iterator<I>
+		{
+			if (b <= e) {
+				--b;
+			}
+
+			return *this;
+		}	
+		constexpr interval operator--(int) noexcept
+			requires std::bidirectional_iterator<I>
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
+		// random access
+		constexpr interval& operator+=(difference_type d) noexcept
+			requires std::random_access_iterator<I>
+		{
+			b += d;
+
+			return *this;
+		}	
+		constexpr interval operator+(difference_type d) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return interval(b + d, e);
+		}
+		constexpr friend interval operator+(difference_type d, interval) noexcept
+			requires std::random_access_iterator<I>
+		{
+			return interval(b + d, e);
+		}
+		constexpr interval& operator-=(difference_type d) noexcept
+			requires std::random_access_iterator<I>
+		{
+			b -= d;
+
+			return *this;
+		}
+		constexpr interval operator-(difference_type d) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return interval(b - d, e);
+		}	
+		constexpr difference_type operator-(const interval& i) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return b - i.b;
+		}
+		constexpr const reference& operator[](difference_type d) const noexcept
+			requires std::random_access_iterator<I>
+		{
+			return b[d];
+		}
+		constexpr reference operator[](difference_type d) noexcept
+			requires std::random_access_iterator<I>
+		{
+			return b[d];
 		}
 	};
 
@@ -298,7 +388,7 @@ namespace fms::iterable {
 		constexpr iota(T t = 0)
 			: t(t)
 		{ }
-		constexpr virtual ~iota() = default;
+		constexpr ~iota() = default;
 
 		constexpr auto operator<=>(const iota&) const = default;
 
@@ -308,7 +398,7 @@ namespace fms::iterable {
 		}
 		// no end()
 
-		constexpr virtual explicit operator bool() const noexcept
+		constexpr explicit operator bool() const noexcept
 		{
 			return true;
 		}
@@ -401,7 +491,7 @@ namespace fms::iterable {
 		{ }
 		constexpr sequence(const sequence&) = default;
 		constexpr sequence& operator=(const sequence&) = default;
-		constexpr virtual ~sequence() = default;
+		constexpr ~sequence() = default;
 
 		constexpr bool operator==(const sequence& s) const
 		{
@@ -418,7 +508,7 @@ namespace fms::iterable {
 		}
 		// no end()
 
-		constexpr virtual explicit operator bool() const noexcept
+		constexpr explicit operator bool() const noexcept
 		{
 			return true;
 		}
@@ -506,7 +596,7 @@ namespace fms::iterable {
 		constexpr power(T t, T tn = 1)
 			: t(t), tn(tn)
 		{ }
-		constexpr virtual ~power() = default;
+		constexpr ~power() = default;
 
 		constexpr bool operator==(const power& p) const = default;
 
@@ -516,7 +606,7 @@ namespace fms::iterable {
 		}
 		// no end()
 
-		constexpr virtual explicit operator bool() const noexcept
+		constexpr explicit operator bool() const noexcept
 		{
 			return true;
 		}
@@ -570,7 +660,7 @@ namespace fms::iterable {
 		constexpr factorial(T t = 1)
 			: t(t), n(1)
 		{ }
-		constexpr virtual ~factorial() = default;
+		constexpr ~factorial() = default;
 
 		constexpr bool operator==(const factorial& f) const = default;
 
@@ -580,7 +670,7 @@ namespace fms::iterable {
 		}
 		// no end()
 
-		constexpr virtual explicit operator bool() const noexcept
+		constexpr explicit operator bool() const noexcept
 		{
 			return true;
 		}
@@ -635,7 +725,7 @@ namespace fms::iterable {
 		constexpr choose(T n)
 			: n(n), k(0), nk(1)
 		{ }
-		constexpr virtual ~choose() = default;
+		constexpr ~choose() = default;
 
 		constexpr bool operator==(const choose& c) const = default;
 
@@ -648,7 +738,7 @@ namespace fms::iterable {
 			return choose{ n, n + 1, 0 };
 		}
 
-		constexpr virtual explicit operator bool() const noexcept
+		constexpr explicit operator bool() const noexcept
 		{
 			return k <= n;
 		}
@@ -696,7 +786,7 @@ namespace fms::iterable {
 		constexpr ptr& operator=(const ptr&) = default;
 		constexpr ptr(ptr&&) = default;
 		constexpr ptr& operator=(ptr&&) = default;
-		constexpr virtual ~ptr() = default;
+		constexpr ~ptr() = default;
 
 		constexpr auto operator<=>(const ptr& _p) const = default;
 
@@ -706,7 +796,7 @@ namespace fms::iterable {
 		}
 		// no end()
 
-		constexpr virtual explicit operator bool() const noexcept
+		constexpr explicit operator bool() const noexcept
 		{
 			return p != nullptr;
 		}
@@ -811,7 +901,7 @@ namespace fms::iterable {
 		constexpr counted& operator=(const counted&) = default;
 		constexpr counted(counted&&) = default;
 		constexpr counted& operator=(counted&&) = default;
-		constexpr virtual ~counted() = default;
+		constexpr ~counted() = default;
 
 		/*constexpr*/ auto operator<=>(const counted& i_) const = default;
 		// i <=> i_.i || n <=> i_.n;
