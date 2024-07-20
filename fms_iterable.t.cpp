@@ -117,8 +117,8 @@ int interval_test()
 		assert(*i == 3);
 		i -= 2;
 		assert(*i == 1);
-		//i[1] = 4;
-		//assert(*(i + 1) == 4);
+		i[1] = 4;
+		assert(*(i + 1) == 4);
 	}
 	{
 		std::vector<int> v({ 1, 2, 3 });
