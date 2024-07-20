@@ -333,10 +333,10 @@ namespace fms::iterable {
 		{
 			return interval(b + d, e);
 		}
-		constexpr friend interval operator+(difference_type d, interval) noexcept
+		constexpr friend interval operator+(difference_type d, const interval& i) noexcept
 			requires std::random_access_iterator<I>
 		{
-			return interval(b + d, e);
+			return i + d;
 		}
 		constexpr interval& operator-=(difference_type d) noexcept
 			requires std::random_access_iterator<I>
