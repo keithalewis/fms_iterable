@@ -303,7 +303,6 @@ namespace fms::iterable {
 		}
 		// bidirectional
 		constexpr interval& operator--() noexcept
-			requires std::bidirectional_iterator<I>
 		{
 			if (b <= e) {
 				--b;
@@ -312,7 +311,6 @@ namespace fms::iterable {
 			return *this;
 		}	
 		constexpr interval operator--(int) noexcept
-			requires std::bidirectional_iterator<I>
 		{
 			auto tmp{ *this };
 
@@ -322,46 +320,38 @@ namespace fms::iterable {
 		}
 		// random access
 		constexpr interval& operator+=(difference_type d) noexcept
-			requires std::random_access_iterator<I>
 		{
 			b += d;
 
 			return *this;
 		}	
 		constexpr interval operator+(difference_type d) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return interval(b + d, e);
 		}
 		constexpr friend interval operator+(difference_type d, const interval& i) noexcept
-			requires std::random_access_iterator<I>
 		{
 			return i + d;
 		}
 		constexpr interval& operator-=(difference_type d) noexcept
-			requires std::random_access_iterator<I>
 		{
 			b -= d;
 
 			return *this;
 		}
 		constexpr interval operator-(difference_type d) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return interval(b - d, e);
 		}	
 		constexpr difference_type operator-(const interval& i) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return b - i.b;
 		}
 		constexpr const reference& operator[](difference_type d) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return b[d];
 		}
 		constexpr reference operator[](difference_type d) noexcept
-			requires std::random_access_iterator<I>
 		{
 			return b[d];
 		}
@@ -930,7 +920,6 @@ namespace fms::iterable {
 		}
 		// indirectly writable
 		constexpr reference operator*() noexcept
-			requires std::indirectly_writable<I, value_type>
 		{
 			return *i;
 		}
@@ -954,7 +943,6 @@ namespace fms::iterable {
 		}
 		// bidirectional
 		constexpr counted& operator--() noexcept
-			requires std::bidirectional_iterator<I>
 		{
 			--i;
 			++n;
@@ -962,7 +950,6 @@ namespace fms::iterable {
 			return *this;
 		}
 		constexpr counted operator--(int) noexcept
-			requires std::bidirectional_iterator<I>
 		{
 			auto tmp{ *this };
 
@@ -972,7 +959,6 @@ namespace fms::iterable {
 		}
 		// random access
 		constexpr counted& operator+=(difference_type d) noexcept
-			requires std::random_access_iterator<I>
 		{
 			i += d;
 			n -= d;
@@ -980,17 +966,14 @@ namespace fms::iterable {
 			return *this;
 		}
 		constexpr counted operator+(difference_type d) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return counted(i + d, n - d);
 		}
 		constexpr friend counted<I> operator+(std::ptrdiff_t d, counted<I> c) noexcept
-			requires std::random_access_iterator<I>
 		{
 			return c += d;
 		}
 		constexpr counted& operator-=(difference_type d) noexcept
-			requires std::random_access_iterator<I>
 		{
 			i -= d;
 			n += d;
@@ -998,22 +981,18 @@ namespace fms::iterable {
 			return *this;
 		}
 		constexpr difference_type operator-(const counted& _i) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return i - _i.i;
 		}
 		constexpr counted operator-(difference_type d) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return counted(i - d, n + d);
 		}
 		constexpr reference operator[](difference_type d) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return i[d];
 		}
 		constexpr reference operator[](difference_type d) noexcept
-			requires std::random_access_iterator<I>
 		{
 			return i[d];
 		}
@@ -1094,7 +1073,6 @@ namespace fms::iterable {
 			return *i;
 		}
 		constexpr reference operator*() noexcept
-			requires std::indirectly_writable<I, value_type>
 		{
 			return *i;
 		}
@@ -1284,7 +1262,6 @@ namespace fms::iterable {
 			return tmp;
 		}
 		constexpr concatenate2& operator--()
-			requires std::bidirectional_iterator<I0> && std::bidirectional_iterator<I1>
 		{
 			if (i0) {
 				--i0;
@@ -1296,7 +1273,6 @@ namespace fms::iterable {
 			return *this;
 		}
 		constexpr concatenate2 operator--(int)
-			requires std::bidirectional_iterator<I0> && std::bidirectional_iterator<I1>
 		{
 			auto tmp{ *this };
 
@@ -1548,14 +1524,12 @@ namespace fms::iterable {
 		}
 		// bidirectional
 		constexpr apply& operator--() noexcept
-			requires std::bidirectional_iterator<I>
 		{
 			--i;
 
 			return *this;
 		}
 		constexpr apply operator--(int) noexcept
-			requires std::bidirectional_iterator<I>
 		{
 			auto tmp{ *this };
 
@@ -1565,41 +1539,34 @@ namespace fms::iterable {
 		}
 		// random access
 		constexpr apply& operator+=(difference_type n) noexcept
-			requires std::random_access_iterator<I>
 		{
 			i += n;
 
 			return *this;
 		}
 		consteval apply operator+(difference_type n) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return apply(f, i + n);
 		}
 		constexpr friend apply operator+(difference_type n, apply a) noexcept
-			requires std::random_access_iterator<I>
 		{
 			return a + n;
 		}
 		constexpr apply& operator-=(difference_type n) noexcept
-			requires std::random_access_iterator<I>
 		{
 			i -= n;
 
 			return *this;
 		}
 		constexpr apply operator-(difference_type n) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return apply(f, i - n);
 		}
 		constexpr difference_type operator-(const apply& a) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return i - a.i;
 		}
 		const reference& operator[](difference_type n) const noexcept
-			requires std::random_access_iterator<I>
 		{
 			return f(i[n]);
 		}
@@ -1672,7 +1639,6 @@ namespace fms::iterable {
 			}
 			// bidirectional
 			constexpr binop& operator--() noexcept
-				requires std::bidirectional_iterator<I0> && std::bidirectional_iterator<I1>
 			{
 				--i0;
 				--i1;
@@ -1680,7 +1646,6 @@ namespace fms::iterable {
 				return *this;
 			}
 			constexpr binop operator--(int) noexcept
-				requires std::bidirectional_iterator<I0> && std::bidirectional_iterator<I1>
 			{
 				auto b{ *this };
 
@@ -1690,7 +1655,6 @@ namespace fms::iterable {
 			}
 			// random access
 			constexpr binop& operator+=(difference_type n) noexcept
-				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
 			{
 				i0 += n;
 				i1 += n;
@@ -1698,17 +1662,14 @@ namespace fms::iterable {
 				return *this;
 			}
 			constexpr binop operator+(difference_type n) const noexcept
-				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
 			{
 				return binop(op, i0 + n, i1 + n);
 			}
 			constexpr friend binop operator+(difference_type n, binop b) noexcept
-				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
 			{
 				return b + n;
 			}
 			constexpr binop& operator-=(difference_type n) noexcept
-				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
 			{
 				i0 -= n;
 				i1 -= n;
@@ -1716,17 +1677,14 @@ namespace fms::iterable {
 				return *this;
 			}
 			constexpr binop operator-(difference_type n) const noexcept
-				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
 			{
 				return binop(op, i0 - n, i1 - n);
 			}
 			constexpr difference_type operator-(const binop& b) const noexcept
-				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
 			{
 				return i0 - b.i0;
 			}
 			const reference& operator[](difference_type n) const noexcept
-				requires std::random_access_iterator<I0> && std::random_access_iterator<I1>
 			{
 				return op(i0[n], i1[n]);
 			}
@@ -1959,7 +1917,7 @@ namespace fms::iterable {
 	}
 
 	// d(i[1], i[0]), d(i[2], i[1]), ...
-	template <class I, class T = std::iter_value_t<I>, class D = std::minus<T>, 
+	template <class I, class T = std::iter_value_t<I>, class D = std::minus<T>,
 		typename U = std::invoke_result_t<D, T, T>>
 	class delta {
 		copy_assignable<D> d;
@@ -1974,7 +1932,7 @@ namespace fms::iterable {
 
 		constexpr delta() = default;
 		constexpr delta(I _i, D _d = std::minus<T>{})
-			: d(std::move(_d)), i(std::move(_i))
+			: d(std::move(_d)), i(std::move(_i)), t(T{})
 		{
 			if (i) {
 				t = *i;
@@ -1998,7 +1956,7 @@ namespace fms::iterable {
 		}
 		constexpr delta end() const noexcept
 		{
-			return delta(--i.end());
+			return delta(--i.end(), d);
 		}
 
 		constexpr explicit operator bool() const
@@ -2023,6 +1981,20 @@ namespace fms::iterable {
 			auto tmp{ *this };
 
 			operator++();
+
+			return tmp;
+		}
+		constexpr delta& operator--() noexcept
+		{
+			t = *(----i)++;
+
+			return *this;
+		}
+		constexpr delta operator--(int) noexcept
+		{
+			auto tmp{ *this };
+
+			operator--();
 
 			return tmp;
 		}
@@ -2099,14 +2071,12 @@ namespace fms::iterable {
 		}
 		// bidirectional
 		constexpr tuple& operator--() noexcept
-			requires (std::bidirectional_iterator<Is> && ...)
 		{
 			std::apply([](auto&... i) { (--i, ...); }, is);
 
 			return *this;
 		}
 		constexpr tuple operator--(int) noexcept
-			requires (std::bidirectional_iterator<Is> && ...)
 		{
 			auto tmp{ *this };
 
@@ -2116,14 +2086,12 @@ namespace fms::iterable {
 		}
 		// random access
 		constexpr tuple& operator+=(difference_type n) noexcept
-			requires (std::random_access_iterator<Is> && ...)
 		{
 			std::apply([n](auto&... i) { ((i += n), ...); }, is);
 
 			return *this;
 		}
 		constexpr tuple operator+(difference_type n) const noexcept
-			requires (std::random_access_iterator<Is> && ...)
 		{
 			auto is_ = is;
 			std::apply([n](auto&... i) { ((i += n), ...); }, is_);
@@ -2131,19 +2099,16 @@ namespace fms::iterable {
 			return tuple(is_);
 		}
 		constexpr friend tuple operator+(difference_type n, tuple t) noexcept
-			requires (std::random_access_iterator<Is> && ...)
 		{
 			return t += n;
 		}
 		constexpr tuple& operator-=(difference_type n) noexcept
-			requires (std::random_access_iterator<Is> && ...)
 		{
 			std::apply([n](auto&... i) { ((i -= n), ...); }, is);
 
 			return *this;
 		}
 		constexpr tuple operator-(difference_type n) const noexcept
-			requires (std::random_access_iterator<Is> && ...)
 		{
 			auto is_ = is;
 			std::apply([n](auto&... i) { ((i -= n), ...); }, is_);
@@ -2151,12 +2116,10 @@ namespace fms::iterable {
 			return tuple(is_);
 		}
 		const reference& operator[](difference_type n) const noexcept
-			requires (std::random_access_iterator<Is> && ...)
 		{
 			return std::apply([n](auto... i) { return std::make_tuple(i[n]...); }, is);
 		}
 		reference operator[](difference_type n) noexcept
-			requires (std::random_access_iterator<Is> && ...)
 		{
 			return std::apply([n](auto... i) { return std::make_tuple(i[n]...); }, is);
 		}

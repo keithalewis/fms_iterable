@@ -480,6 +480,29 @@ int delta_test()
 		assert(!(d2 != d));
 
 		assert(equal(d, { 1, 1 }));
+		++d;
+		assert(equal(d, { 1 }));
+		--d;
+		assert(equal(d, { 1, 1 }));
+		assert(*d == 1);
+		++d;
+		assert(*d == 1);
+		++d;
+		assert(!d);
+		
+	}
+	{
+		auto d = delta(take(power(2), 3));
+		auto e = d.end();
+		// 2^{n+1} - 2^n = 2^n
+		// delta(1, 2, 4) -> (1, 2)
+		assert(equal(d, { 1, 2 }));
+		assert(*d == 1);
+		++d;
+		assert(*d == 2);
+		++d;
+		assert(!d);
+		assert(d == e);
 	}
 	{
 		auto d = delta(apply([](int i) { return i * i; }, take(iota(1), 3)));
