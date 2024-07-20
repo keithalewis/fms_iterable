@@ -1283,6 +1283,27 @@ namespace fms::iterable {
 
 			return tmp;
 		}
+		constexpr concatenate2& operator--()
+			requires std::bidirectional_iterator<I0> && std::bidirectional_iterator<I1>
+		{
+			if (i0) {
+				--i0;
+			}
+			else {
+				--i1;
+			}
+
+			return *this;
+		}
+		constexpr concatenate2 operator--(int)
+			requires std::bidirectional_iterator<I0> && std::bidirectional_iterator<I1>
+		{
+			auto tmp{ *this };
+
+			operator--();
+
+			return tmp;
+		}
 	};
 	template<class I>
 	constexpr auto concatenate(I i)
