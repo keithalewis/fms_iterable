@@ -1977,7 +1977,7 @@ namespace fms::iterable {
 		}
 		constexpr delta end() const noexcept
 		{
-			return delta(last(i));
+			return delta(--i.end());
 		}
 
 		constexpr explicit operator bool() const
