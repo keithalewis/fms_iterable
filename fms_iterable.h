@@ -1862,8 +1862,8 @@ namespace fms::iterable {
 		using difference_type = std::ptrdiff_t;
 
 		constexpr delta() = default;
-		constexpr delta(I _i, const T& _t = 0, D _d = std::minus<T>{})
-			: d(std::move(_d)), i(std::move(_i)), t(_t)
+		constexpr delta(I _i, D _d = std::minus<T>{})
+			: d(std::move(_d)), i(std::move(_i))
 		{
 			if (i) {
 				t = *i;
