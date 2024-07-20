@@ -1609,7 +1609,18 @@ namespace fms::iterable {
 			constexpr binop end() const noexcept
 				requires has_end<I0> || has_end<I1>
 			{
-				difference_type n = std::min(size(i0), size(i1));
+				difference_type n;
+				if constexpr (has_end<I0>) {
+					if constexpr (has_end<I1>) {
+						n = std::min(size(i0), size(i1));
+					}
+					else {
+						n = size(i0);
+					}
+				}
+				else if constexpr (has_end<I1>) {
+					n = size(i1);
+				}
 
 				return binop(op, drop(i0, n), drop(i1, n));
 			}

@@ -619,6 +619,40 @@ int sequence_test()
 	return 0;
 }
 
+int binop_test()
+{
+	{
+		auto b = binop(std::plus<int>{}, iota(1), iota(2));
+		assert(b);
+		auto b2{ b };
+		assert(b2);
+		assert(b == b2);
+		b2 = b;
+		assert(!(b2 != b));
+
+		assert(*b == 1 + 2);
+		++b;
+		assert(*b == 2 + 3);
+
+		b = drop(b, 10);
+		assert(*b == 12 + 13);
+	}
+	{
+		auto b = binop(std::plus<int>{}, take(iota(1), 4), iota(2));
+		assert(size(b) == 4);
+	}
+	{
+		auto b = binop(std::plus<int>{}, take(iota(1), 4), take(iota(2), 3));
+		assert(size(b) == 3);
+	}
+	{
+		auto b = binop(std::plus<int>{}, iota(1), take(iota(2), 3));
+		assert(size(b) == 3);
+	}
+
+	return 0;
+}
+
 int main()
 {
 	drop_test();
@@ -640,6 +674,7 @@ int main()
 	exp_test();
 	tuple_test();
 	sequence_test();
+	binop_test();
 
 	return 0;
 }
