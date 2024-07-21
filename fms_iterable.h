@@ -1291,6 +1291,16 @@ namespace fms::iterable {
 	{
 		return concatenate2(i, concatenate(is...));
 	}
+	template<class I, class T = std::iter_value_t<I>>
+	constexpr auto append(I i, T t)
+	{
+		return concatenate2(std::move(i), single(t));
+	}
+	template<class I, class T = std::iter_value_t<I>>
+	constexpr auto prepend(T t, I i)
+	{
+		return concatenate2(single(t), std::move(i));
+	}
 
 	// Sorted i0 and i1 in order. Equivalent (!< and !>) elements are repeated.
 	template <class I0, class I1, class T = std::common_type_t<std::iter_value_t<I0>, std::iter_value_t<I1>>>

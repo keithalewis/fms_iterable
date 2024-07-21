@@ -339,6 +339,13 @@ int concatenate_test()
 		assert(starts_with(ij, { 1,2,3,4,5,6,7 }));
 		// size_t n = size(ij); // infinite
 	}
+	{
+		const auto e = empty<int>();
+		const auto e1 = append(e, 1);
+		assert(equal(e1, { 1 }));
+		const auto e2 = prepend(2, e1);
+		assert(equal(e2, { 2, 1 }));
+	}
 
 	return 0;
 }
