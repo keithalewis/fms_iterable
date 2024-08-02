@@ -9,6 +9,7 @@
 #include <optional>
 #include <tuple>
 #include <utility>
+#include <boost/function.hpp>
 
 namespace fms::iterable {
 
@@ -1454,9 +1455,19 @@ namespace fms::iterable {
 
 			return *this;
 		}
-		copy_assignable(copy_assignable&&) = default;
-		copy_assignable& operator=(copy_assignable&&) = default;
-		~copy_assignable() = default;
+		copy_assignable(copy_assignable&& a)
+			: f(std::move(a.f))
+		{ }
+		copy_assignable& operator=(copy_assignable&& a)
+		{
+			if (this != &a) {
+				f = std::move(a.f);
+			}
+
+			return *this;
+		};
+		~copy_assignable()
+		{ }
 
 		constexpr operator F() const
 		{
