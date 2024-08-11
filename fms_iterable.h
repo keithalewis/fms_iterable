@@ -9,7 +9,7 @@
 #include <optional>
 #include <tuple>
 #include <utility>
-#include <boost/function.hpp>
+//#include <boost/function.hpp>
 
 namespace fms::iterable {
 
@@ -95,6 +95,8 @@ namespace fms::iterable {
 	constexpr auto compare(I i, J j)
 		requires has_end<I> && has_end<J>
 	{
+		using order_type = decltype(*i <=> *j);
+
 		while (i && j) {
 			const auto cmp = *i <=> *j;
 			if (cmp != 0) {
@@ -104,7 +106,7 @@ namespace fms::iterable {
 			++j;
 		}
 
-		return !!i <=> !!j;
+		return static_cast<order_type>(!!i <=> !!j);
 	}
 	// All elements are equal.
 	template<class I, class J>
