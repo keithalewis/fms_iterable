@@ -1439,13 +1439,8 @@ namespace fms::iterable {
 			: f(std::move(f))
 		{ }
 		copy_assignable(const copy_assignable& a)
-			: f{}
-		{
-			f.reset();
-			if (a.f.has_value()) {
-				f.emplace(a.f.value());
-			}
-		}
+			: f(a.f)
+		{ }
 		copy_assignable& operator=(const copy_assignable& a)
 		{
 			if (this != &a) {
@@ -1458,12 +1453,20 @@ namespace fms::iterable {
 			return *this;
 		}
 		copy_assignable(copy_assignable&& a)
-			: f(std::move(a.f))
-		{ }
+			: f{}
+		{ 
+			f.reset();
+			if (a.f.has_value()) {
+				f.emplace(std::move(a.f.value()));
+			}
+		}
 		copy_assignable& operator=(copy_assignable&& a)
 		{
 			if (this != &a) {
-				f = std::move(a.f);
+				if (f.has_value()) {
+					f.reset();
+					f.emplace(std::move(a.f.value()));
+				}
 			}
 
 			return *this;
