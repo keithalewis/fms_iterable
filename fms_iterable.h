@@ -18,23 +18,23 @@ namespace fms::iterable {
 		{ i.operator bool() } -> std::same_as<bool>;
 	};
 
-	template<class I> concept input_iterable
+	template<class I> concept input
 		= std::input_iterator<I> && has_op_bool<I>;
-	template<class I, class T> concept output_iterable
+	template<class I, class T> concept output
 		= std::output_iterator<I, T>&& has_op_bool<I>;
-	template<class I> concept forward_iterable
+	template<class I> concept forward
 		= std::forward_iterator<I> && has_op_bool<I>;
-	template<class I> concept bidirectional_iterable
+	template<class I> concept bidirectional
 		= std::bidirectional_iterator<I> && has_op_bool<I>;
-	template<class I> concept random_access_iterable
+	template<class I> concept random_access
 		= std::random_access_iterator<I> && has_op_bool<I>;
-	template<class I> concept contiguous_iterable
+	template<class I> concept contiguous
 		= std::contiguous_iterator<I> && has_op_bool<I>;
 
 	template<class C>
-	struct back_insert_iterable : public std::back_insert_iterator<C>
+	struct back_insert : public std::back_insert_iterator<C>
 	{
-		constexpr explicit back_insert_iterable(C& c) noexcept
+		constexpr explicit back_insert(C& c) noexcept
 			: std::back_insert_iterator<C>(c)
 		{ }
 		constexpr explicit operator bool() const noexcept
@@ -43,15 +43,15 @@ namespace fms::iterable {
 		}
 	};
 	template <class C>
-	[[nodiscard]] constexpr back_insert_iterable<C> back_inserter(C& c) noexcept
+	[[nodiscard]] constexpr back_insert<C> back_inserter(C& c) noexcept
 	{
-		return back_insert_iterable<C>(c);
+		return back_insert<C>(c);
 	}
 
 	template<class C>
-	struct front_insert_iterable : public std::front_insert_iterator<C>
+	struct front_insert : public std::front_insert_iterator<C>
 	{
-		constexpr explicit front_insert_iterable(C& c) noexcept
+		constexpr explicit front_insert(C& c) noexcept
 			: std::front_insert_iterator<C>(c)
 		{ }
 		constexpr explicit operator bool() const noexcept
@@ -60,9 +60,9 @@ namespace fms::iterable {
 		}
 	};
 	template <class C>
-	[[nodiscard]] constexpr front_insert_iterable<C> front_inserter(C& c) noexcept
+	[[nodiscard]] constexpr front_insert<C> front_inserter(C& c) noexcept
 	{
-		return front_insert_iterable<C>(c);
+		return front_insert<C>(c);
 	}
 
 	template <class I>

@@ -138,7 +138,7 @@ int interval_test()
 		//assert(*last(j) == 3);
 
 		std::vector<int> w;
-		copy(i, back_insert_iterable(w));
+		copy(i, back_insert(w));
 		assert(equal(i, make_interval(w)));
 	}
 
