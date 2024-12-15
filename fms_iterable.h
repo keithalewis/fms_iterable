@@ -1427,6 +1427,7 @@ namespace fms::iterable {
 	{
 		return merge2(std::move(i), merge(std::move(is)...));
 	}
+	// TODO: merge adds index merge came from
 
 	// copy assignable function object
 	// TODO: replace with std::copyable_function
