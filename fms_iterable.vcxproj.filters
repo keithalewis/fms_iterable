@@ -18,6 +18,9 @@
     <ClInclude Include="fms_iterable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="fms_poly.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="fms_iterable.t.cpp">

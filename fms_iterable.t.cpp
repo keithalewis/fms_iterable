@@ -682,6 +682,7 @@ int main()
 	tuple_test();
 	sequence_test();
 	binop_test();
+	disjoint_merge_test();
 
 	return 0;
 }

@@ -1427,7 +1427,177 @@ namespace fms::iterable {
 	{
 		return merge2(std::move(i), merge(std::move(is)...));
 	}
+	/*
+	// Helper function to create pairs with indices 
+	template <std::size_t I, typename T> 
+	constexpr std::pair<std::size_t, T> make_pair_with_index(T&& value)
+	{ 
+		return { I, std::forward<T>(value) }; 
+	}
+	constexpr auto xxx0 = make_pair_with_index<0>(1);
+	
+	// Recursive function to create initializer list of pairs 
+	template <std::size_t... Is, typename Tuple> 
+	constexpr auto tuple_to_initializer_list_impl(std::index_sequence<Is...>, Tuple&& tuple)
+	{ 
+		return std::initializer_list<std::pair<std::size_t, T>
+		({ make_pair_with_index<Is>(std::get<Is>(std::forward<Tuple>(tuple)))... }); 
+	} 
+	
+	//constexpr auto xxx1 = tuple_to_initializer_list_impl(std::make_index_sequence<3>{}, std::make_tuple(1, 2, 3));
+	
+	// Main function to convert tuple to initializer list of pairs 
+	template <typename... Ts> 
+	constexpr auto tuple_to_initializer_list(const std::tuple<Ts...>& tuple)
+	{ 
+		return tuple_to_initializer_list_impl(std::make_index_sequence<sizeof...(Ts)>{}, tuple); 
+	}
+	//constexpr auto xxx = tuple_to_initializer_list(std::make_tuple(1, 2, 3));
+	*/
+	// transparent less for std::pair<size_t, T>
+	template<class T, class TT = std::pair<std::size_t, T>>
+	struct less {
+		constexpr bool operator()(const TT& a, const TT& b) const
+		{
+			return a.second < b.second;
+		}
+	};
+	static_assert(less<int>{}(std::make_pair(0, 1), std::make_pair(0, 2)));
+	static_assert(!less<int>{}(std::make_pair(0, 3), std::make_pair(0, 2)));
+
 	// TODO: merge adds index merge came from
+	// Sorted is order. Equivalent (!< and !>) elements are repeated.
+	template <class... Is>
+	class disjoin_merge {
+		using T = std::common_type_t<std::iter_value_t<Is>... >;
+		std::tuple<Is...> is;
+		std::pair<T, std::size_t> ti; // current value at minimum index
+
+		constexpr bool empty() const
+		{
+			return std::apply([](auto... i) { return (!i && ...); }, is);
+		}
+
+		static constexpr T star(const auto& i)
+		{
+			return i ? T(*i) : std::numeric_limits<T>::max();
+		}
+
+		template<class I>
+		constexpr std::pair<T, std::size_t> min_value(const I& i) const
+		{
+			return std::make_pair(star(std::get<0>(is)), 0);
+		}
+
+		constexpr std::pair<T, std::size_t> arg_min() const
+		{
+			return std::min(std::make_pair(std::get<0>(is), 0), std::make_pair(std::get<1>(is), 1), less<T>());
+		}
+		static constexpr T star(const auto& i)
+		{
+			return i ? T(*i) : std::numeric_limits<T>::max();
+		}
+		constexpr auto stars() const
+		{
+			return std::apply(star, is);
+
+		template<std::size_t I>
+		static constexpr auto make_indexed_pair(T&& value)
+		{ 
+			return std::make_pair(I, std::forward<T>(value)); 
+		}
+		template<class std::size_t... Js>
+		constexpr auto amin(std::index_sequence<Js...>) const
+		{
+			return get<Js>(star(std::forward<Is>(is))))... });
+		}
+		// Create pairs from parameter pack.
+		template<std::size_t... Is>
+		static constexpr auto create_indexed_pairs(std::index_sequence<Is...>)
+		{
+			return std::initializer_list<std::pair<std::size_t, T>>
+			{ make_indexed_pair<Is>(std::get<Is>(star(std::forward<Args>(args))))... };
+		}
+		constexpr std::pair<size_t, T> arg_min() const
+		{
+			return { 0, 0 }; //std::min<std::pair<size_t, T>>(
+				//create_indexed_pairs(std::make_index_sequence<sizeof...(Is)>{}, is));
+		}
+	public:
+		using iterator_category = std::input_iterator_tag;
+		using value_type = std::pair<std::size_t, T>;
+		template<std::size_t I = 0>
+		constexpr void incr(size_t i)
+		{
+			if (I == i) {
+				++std::get<I>(is);
+			}
+			else if constexpr(I + 1 < is.size()) {
+				return incr<I + 1>(i);
+			}
+		}
+
+		disjoin_merge(Is... is)
+			: is{ is... }, it{ arg_min() }
+		{
+		}
+
+		constexpr std::size_t size() const
+		{
+			return is.size();
+		}
+		
+		constexpr bool operator==(const disjoin_merge& m) const = default;
+
+		constexpr auto begin() const
+		{
+			return *this;
+		}
+		/*
+		constexpr auto end() const
+			requires (has_end<Is> && ...)
+		{
+			return merge_n(is.end()...);
+		}
+		*/
+		
+		constexpr explicit operator bool() const
+		{
+			return !empty();
+		}
+		
+		constexpr value_type operator*() const
+		{
+			return it;
+		}
+		constexpr disjoin_merge& operator++()
+		{
+			if (!empty()) {
+				incr(it.first);
+				it = arg_min();
+			}
+
+			return *this;
+		}
+	};
+#ifdef _DEBUG
+	inline int disjoint_merge_test()
+	{
+		{
+			auto m = disjoin_merge(iota(0));
+			auto m2(m);
+			assert(m = m2);
+			m = m2;
+			assert(!(m2 != m));
+			assert(m);
+			assert((*m).first == 0);//std::make_pair(0, 0));
+			assert((*m).second == 0);//std::make_pair(0, 0));
+			//++m;
+		}
+		return 0;
+	}
+#endif // _DEBUG
+
 
 	// copy assignable function object
 	// TODO: replace with std::copyable_function
