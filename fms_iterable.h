@@ -1428,35 +1428,41 @@ namespace fms::iterable {
 		return merge2(std::move(i), merge(std::move(is)...));
 	}
 	/*
-	// Helper function to create pairs with indices 
-	template <std::size_t I, typename T> 
-	constexpr std::pair<std::size_t, T> make_pair_with_index(T&& value)
-	{ 
-		return { I, std::forward<T>(value) }; 
+	// Helper function to create a pair with an index and a value
+	template <std::size_t I, typename T>
+	constexpr auto make_indexed_pair(T&& value) {
+		return std::make_pair(I, std::forward<T>(value));
 	}
-	constexpr auto xxx0 = make_pair_with_index<0>(1);
-	
-	// Recursive function to create initializer list of pairs 
-	template <std::size_t... Is, typename Tuple> 
-	constexpr auto tuple_to_initializer_list_impl(std::index_sequence<Is...>, Tuple&& tuple)
-	{ 
-		return std::initializer_list<std::pair<std::size_t, T>
-		({ make_pair_with_index<Is>(std::get<Is>(std::forward<Tuple>(tuple)))... }); 
-	} 
-	
-	//constexpr auto xxx1 = tuple_to_initializer_list_impl(std::make_index_sequence<3>{}, std::make_tuple(1, 2, 3));
-	
-	// Main function to convert tuple to initializer list of pairs 
-	template <typename... Ts> 
-	constexpr auto tuple_to_initializer_list(const std::tuple<Ts...>& tuple)
-	{ 
-		return tuple_to_initializer_list_impl(std::make_index_sequence<sizeof...(Ts)>{}, tuple); 
+
+	// Recursive function to find the minimum value and its index
+	template <typename T>
+	constexpr auto min_indexed_value(T t) {
+		return std::make_pair(0, t);
 	}
-	//constexpr auto xxx = tuple_to_initializer_list(std::make_tuple(1, 2, 3));
+
+	template <std::size_t I, typename T, typename... Ts>
+	constexpr auto min_indexed_value(std::pair<I, T> t, std::pair<I + 1, Ts>... ts) {
+		auto min_rest = min_indexed_value(ts...);
+		return t.second < min_rest.second ? t : min_rest;
+	}
+
+	// Main function to find the minimum value and its index in a tuple
+	template <typename Tuple, std::size_t... Is>
+	constexpr auto tuple_min_indexed_impl(const Tuple& tuple, std::index_sequence<Is...>) {
+		return min_indexed_value(make_indexed_pair<Is>(std::get<Is>(tuple))...);
+	}
+
+	template <typename... Ts>
+	constexpr auto tuple_min_indexed(const std::tuple<Ts...>& tuple) {
+		return tuple_min_indexed_impl(tuple, std::make_index_sequence<sizeof...(Ts)>{});
+	}
+	//constexpr auto xx = tuple_min_indexed(std::make_tuple(3, 1, 4));
 	*/
+	// Example usage
 	// transparent less for std::pair<size_t, T>
 	template<class T, class TT = std::pair<std::size_t, T>>
 	struct less {
+		//  transparent less for std::pair<size_t, T>
 		constexpr bool operator()(const TT& a, const TT& b) const
 		{
 			return a.second < b.second;
@@ -1471,7 +1477,7 @@ namespace fms::iterable {
 	class disjoin_merge {
 		using T = std::common_type_t<std::iter_value_t<Is>... >;
 		std::tuple<Is...> is;
-		std::pair<T, std::size_t> ti; // current value at minimum index
+		std::pair<std::size_t, T> it; // current value at minimum index
 
 		constexpr bool empty() const
 		{
@@ -1483,59 +1489,34 @@ namespace fms::iterable {
 			return i ? T(*i) : std::numeric_limits<T>::max();
 		}
 
-		template<class I>
-		constexpr std::pair<T, std::size_t> min_value(const I& i) const
+		template<class U>
+		static constexpr std::pair<std::size_t, U> min_value(U t)
 		{
-			return std::make_pair(star(std::get<0>(is)), 0);
+			return { 0, t };
+		}
+		template<class U, class... Us>
+		static constexpr std::pair<std::size_t, std::common_type_t<U,Us...>> min_value(U t, Us... ts)
+		{
+			auto [i, u] = min_value(ts...);
+
+			if (t < u) {
+				return { 0, t };
+			}
+			else {
+				return { i + 1, u };
+			}
+		}
+		constexpr std::pair<std::size_t, T> arg_min() const
+		{
+			return std::apply([](const auto&... i) { return min_value(star(i)...); }, is);
 		}
 
-		constexpr std::pair<T, std::size_t> arg_min() const
+		constexpr void incr()
 		{
-			return std::min(std::make_pair(std::get<0>(is), 0), std::make_pair(std::get<1>(is), 1), less<T>());
-		}
-		static constexpr T star(const auto& i)
-		{
-			return i ? T(*i) : std::numeric_limits<T>::max();
-		}
-		constexpr auto stars() const
-		{
-			return std::apply(star, is);
-
-		template<std::size_t I>
-		static constexpr auto make_indexed_pair(T&& value)
-		{ 
-			return std::make_pair(I, std::forward<T>(value)); 
-		}
-		template<class std::size_t... Js>
-		constexpr auto amin(std::index_sequence<Js...>) const
-		{
-			return get<Js>(star(std::forward<Is>(is))))... });
-		}
-		// Create pairs from parameter pack.
-		template<std::size_t... Is>
-		static constexpr auto create_indexed_pairs(std::index_sequence<Is...>)
-		{
-			return std::initializer_list<std::pair<std::size_t, T>>
-			{ make_indexed_pair<Is>(std::get<Is>(star(std::forward<Args>(args))))... };
-		}
-		constexpr std::pair<size_t, T> arg_min() const
-		{
-			return { 0, 0 }; //std::min<std::pair<size_t, T>>(
-				//create_indexed_pairs(std::make_index_sequence<sizeof...(Is)>{}, is));
 		}
 	public:
 		using iterator_category = std::input_iterator_tag;
 		using value_type = std::pair<std::size_t, T>;
-		template<std::size_t I = 0>
-		constexpr void incr(size_t i)
-		{
-			if (I == i) {
-				++std::get<I>(is);
-			}
-			else if constexpr(I + 1 < is.size()) {
-				return incr<I + 1>(i);
-			}
-		}
 
 		disjoin_merge(Is... is)
 			: is{ is... }, it{ arg_min() }
@@ -1573,7 +1554,7 @@ namespace fms::iterable {
 		constexpr disjoin_merge& operator++()
 		{
 			if (!empty()) {
-				incr(it.first);
+				incr();
 				it = arg_min();
 			}
 
@@ -1592,7 +1573,7 @@ namespace fms::iterable {
 			assert(m);
 			assert((*m).first == 0);//std::make_pair(0, 0));
 			assert((*m).second == 0);//std::make_pair(0, 0));
-			//++m;
+			++m;
 		}
 		return 0;
 	}
