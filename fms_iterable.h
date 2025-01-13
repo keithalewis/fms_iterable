@@ -1431,7 +1431,7 @@ namespace fms::iterable {
 	// TODO: merge adds index merge came from
 	// Sorted is order. Equivalent (!< and !>) elements are repeated.
 	template <class... Is>
-	class disjoin_merge {
+	class disjoint_merge {
 		using T = std::common_type_t<std::iter_value_t<Is>... >;
 		std::tuple<Is...> is;
 		std::pair<std::size_t, T> it; // index and current minimum value.
@@ -1481,7 +1481,7 @@ namespace fms::iterable {
 		using iterator_category = std::input_iterator_tag;
 		using value_type = std::pair<std::size_t, T>;
 
-		disjoin_merge(Is... is)
+		disjoint_merge(Is... is)
 			: is{ is... }, it{ op_star() }
 		{
 		}
@@ -1514,7 +1514,7 @@ namespace fms::iterable {
 		{
 			return it;
 		}
-		constexpr disjoin_merge& operator++()
+		constexpr disjoint_merge& operator++()
 		{
 			if (operator bool()) {
 				op_incr();
@@ -1530,7 +1530,7 @@ namespace fms::iterable {
 		{
 			using pr = std::pair<std::size_t, int>;
 
-			auto m = disjoin_merge(iota(0), iota(0));
+			auto m = disjoint_merge(iota(0), iota(0));
 			auto m2(m);
 			assert(m = m2);
 			m = m2;
