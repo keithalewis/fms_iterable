@@ -1491,7 +1491,7 @@ namespace fms::iterable {
 			return is.size();
 		}
 		
-		constexpr bool operator==(const disjoin_merge& m) const = default;
+		constexpr bool operator==(const disjoint_merge& m) const = default;
 
 		constexpr auto begin() const
 		{
