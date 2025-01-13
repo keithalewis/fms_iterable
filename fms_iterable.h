@@ -1427,49 +1427,6 @@ namespace fms::iterable {
 	{
 		return merge2(std::move(i), merge(std::move(is)...));
 	}
-	/*
-	// Helper function to create a pair with an index and a value
-	template <std::size_t I, typename T>
-	constexpr auto make_indexed_pair(T&& value) {
-		return std::make_pair(I, std::forward<T>(value));
-	}
-
-	// Recursive function to find the minimum value and its index
-	template <typename T>
-	constexpr auto min_indexed_value(T t) {
-		return std::make_pair(0, t);
-	}
-
-	template <std::size_t I, typename T, typename... Ts>
-	constexpr auto min_indexed_value(std::pair<I, T> t, std::pair<I + 1, Ts>... ts) {
-		auto min_rest = min_indexed_value(ts...);
-		return t.second < min_rest.second ? t : min_rest;
-	}
-
-	// Main function to find the minimum value and its index in a tuple
-	template <typename Tuple, std::size_t... Is>
-	constexpr auto tuple_min_indexed_impl(const Tuple& tuple, std::index_sequence<Is...>) {
-		return min_indexed_value(make_indexed_pair<Is>(std::get<Is>(tuple))...);
-	}
-
-	template <typename... Ts>
-	constexpr auto tuple_min_indexed(const std::tuple<Ts...>& tuple) {
-		return tuple_min_indexed_impl(tuple, std::make_index_sequence<sizeof...(Ts)>{});
-	}
-	//constexpr auto xx = tuple_min_indexed(std::make_tuple(3, 1, 4));
-	*/
-	// Example usage
-	// transparent less for std::pair<size_t, T>
-	template<class T, class TT = std::pair<std::size_t, T>>
-	struct less {
-		//  transparent less for std::pair<size_t, T>
-		constexpr bool operator()(const TT& a, const TT& b) const
-		{
-			return a.second < b.second;
-		}
-	};
-	static_assert(less<int>{}(std::make_pair(0, 1), std::make_pair(0, 2)));
-	static_assert(!less<int>{}(std::make_pair(0, 3), std::make_pair(0, 2)));
 
 	// TODO: merge adds index merge came from
 	// Sorted is order. Equivalent (!< and !>) elements are repeated.
@@ -1477,11 +1434,11 @@ namespace fms::iterable {
 	class disjoin_merge {
 		using T = std::common_type_t<std::iter_value_t<Is>... >;
 		std::tuple<Is...> is;
-		std::pair<std::size_t, T> it; // current value at minimum index
+		std::pair<std::size_t, T> it; // index and current minimum value.
 
-		constexpr bool empty() const
+		constexpr bool op_bool() const
 		{
-			return std::apply([](auto... i) { return (!i && ...); }, is);
+			return std::apply([](auto... i) { return (i || ...); }, is);
 		}
 
 		static constexpr T star(const auto& i)
@@ -1506,7 +1463,7 @@ namespace fms::iterable {
 				return { i + 1, u };
 			}
 		}
-		constexpr std::pair<std::size_t, T> arg_min() const
+		constexpr std::pair<std::size_t, T> op_star() const
 		{
 			return std::apply([](const auto&... i) { return min_value(star(i)...); }, is);
 		}
@@ -1516,7 +1473,7 @@ namespace fms::iterable {
 		{
 			((j == Js && ++std::get<Js>(is)), ...);
 		}
-		constexpr void incr()
+		constexpr void op_incr()
 		{
 			incr_impl(it.first, std::index_sequence_for<Is...>{});
 		}
@@ -1525,7 +1482,7 @@ namespace fms::iterable {
 		using value_type = std::pair<std::size_t, T>;
 
 		disjoin_merge(Is... is)
-			: is{ is... }, it{ arg_min() }
+			: is{ is... }, it{ op_star() }
 		{
 		}
 
@@ -1550,7 +1507,7 @@ namespace fms::iterable {
 		
 		constexpr explicit operator bool() const
 		{
-			return !empty();
+			return op_bool();
 		}
 		
 		constexpr value_type operator*() const
@@ -1559,9 +1516,9 @@ namespace fms::iterable {
 		}
 		constexpr disjoin_merge& operator++()
 		{
-			if (!empty()) {
-				incr();
-				it = arg_min();
+			if (operator bool()) {
+				op_incr();
+				it = op_star();
 			}
 
 			return *this;
@@ -1571,21 +1528,19 @@ namespace fms::iterable {
 	inline int disjoint_merge_test()
 	{
 		{
+			using pr = std::pair<std::size_t, int>;
+
 			auto m = disjoin_merge(iota(0), iota(0));
 			auto m2(m);
 			assert(m = m2);
 			m = m2;
 			assert(!(m2 != m));
 			assert(m);
-			assert((*m).first == 0);//std::make_pair(0, 0));
-			assert((*m).second == 0);//std::make_pair(0, 0));
+			assert(*m == pr(0, 0));
 			++m;
-			assert((*m).first == 1);//std::make_pair(0, 0));
-			assert((*m).second == 0);//std::make_pair(0, 0));
-			++m;
-			assert((*m).first == 0);//std::make_pair(0, 0));
-			assert((*m).second == 1);//std::make_pair(0, 0));
+			assert(*m == pr(1, 0));
 
+			assert(*++m == pr(0, 1));
 		}
 		return 0;
 	}
