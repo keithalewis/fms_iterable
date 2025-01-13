@@ -1541,6 +1541,7 @@ namespace fms::iterable {
 			assert(*m == pr(1, 0));
 
 			assert(*++m == pr(0, 1));
+			assert(*++m == pr(1, 1));
 		}
 		return 0;
 	}
