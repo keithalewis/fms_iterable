@@ -1499,7 +1499,7 @@ namespace fms::iterable {
 		{
 			auto [i, u] = min_value(ts...);
 
-			if (t < u) {
+			if (t <= u) {
 				return { 0, t };
 			}
 			else {
@@ -1511,8 +1511,14 @@ namespace fms::iterable {
 			return std::apply([](const auto&... i) { return min_value(star(i)...); }, is);
 		}
 
+		template<std::size_t... Js>
+		constexpr void incr_impl(std::size_t j, std::index_sequence<Js...>)
+		{
+			((j == Js && ++std::get<Js>(is)), ...);
+		}
 		constexpr void incr()
 		{
+			incr_impl(it.first, std::index_sequence_for<Is...>{});
 		}
 	public:
 		using iterator_category = std::input_iterator_tag;
@@ -1565,7 +1571,7 @@ namespace fms::iterable {
 	inline int disjoint_merge_test()
 	{
 		{
-			auto m = disjoin_merge(iota(0));
+			auto m = disjoin_merge(iota(0), iota(0));
 			auto m2(m);
 			assert(m = m2);
 			m = m2;
@@ -1574,6 +1580,12 @@ namespace fms::iterable {
 			assert((*m).first == 0);//std::make_pair(0, 0));
 			assert((*m).second == 0);//std::make_pair(0, 0));
 			++m;
+			assert((*m).first == 1);//std::make_pair(0, 0));
+			assert((*m).second == 0);//std::make_pair(0, 0));
+			++m;
+			assert((*m).first == 0);//std::make_pair(0, 0));
+			assert((*m).second == 1);//std::make_pair(0, 0));
+
 		}
 		return 0;
 	}
